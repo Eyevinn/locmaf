@@ -184,6 +184,7 @@
     <p>
       Two-byte LOCMAF framing carries one whole moof worth of information.
       <code>base_media_decode_time</code> advances implicitly; per-sample fields are unchanged from the previous moof.
+      Single sample size is calculated from total object size.
     </p>
   </div>
 </section>
@@ -280,13 +281,16 @@
       <div>
         <h2>Status</h2>
         <p>
-          This is a first version. The format may evolve based on feedback,
-          measurement on additional codecs, and the trajectory of CMSF and
-          MOQT in the IETF.
+          The wire format is at <code>locmafVersion&nbsp;"0.1"</code>, advertised in the
+          CMSF catalog Track entry whenever <code>packaging == "locmaf"</code>. Receivers
+          compare against their highest supported version and fall back if the encoder is
+          ahead — this covers behavioural changes inside an existing object kind, which the
+          header-ID skip-unknown rule on its own can't detect.
         </p>
         <p>
-          The reference encoder and decoder live in
-          <code>Eyevinn/moqlivemock</code> and the browser player in
+          The format may still evolve based on feedback, measurement on additional codecs,
+          and the trajectory of CMSF and MOQT in the IETF. The reference encoder and decoder
+          live in <code>Eyevinn/moqlivemock</code> and the browser player in
           <code>Eyevinn/warp-player</code>.
         </p>
       </div>

@@ -34,7 +34,7 @@
 
     <!-- mdat raw payload — sample bytes, gray. -->
     <rect x="476" y="0" width="324" height="80" rx="6" fill="#646464" opacity="0.6"/>
-    <text x="638" y="44" class="field" text-anchor="middle" fill="#FFFFFF">mdat raw payload (sample bytes)</text>
+    <text x="638" y="44" class="field" text-anchor="middle" style="fill:#FFFFFF">mdat raw payload (sample bytes)</text>
     <text x="638" y="100" class="note" text-anchor="middle">= MoQ object length − everything above</text>
     <text x="638" y="116" class="note" text-anchor="middle">no `size + 'mdat'` header on the wire</text>
   </g>

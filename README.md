@@ -1,3 +1,11 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="assets/logo-light.svg">
+    <img alt="LOCMAF — Low Overhead CMAF for MOQ" src="assets/logo-light.svg" width="640">
+  </picture>
+</p>
+
 # locmaf.dev
 
 Information site and MARP deck for [LOCMAF](https://github.com/Eyevinn/moqlivemock/blob/main/docs/LOCMAF.md) — *Low Overhead CMAF for MOQ.*

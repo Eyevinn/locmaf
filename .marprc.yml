@@ -1,0 +1,11 @@
+# MARP CLI configuration for the LOCMAF slide deck (a secondary artifact;
+# the primary surface for locmaf.dev is the static index.html landing page).
+
+themeSet:
+  - ./themes/locmaf.css
+
+options:
+  html: true
+
+output: public/slides/index.html
+allowLocalFiles: true

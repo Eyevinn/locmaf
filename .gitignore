@@ -1,0 +1,7 @@
+node_modules/
+public/
+.DS_Store
+*.log
+
+# Playwright MCP transcripts/screenshots used for local visual verification.
+.playwright-mcp/

@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 80" role="img" aria-label="LOCMAF logomark (dark-background variant): CMAF chunks compressed into delta blocks, decompressed back to identical CMAF chunks.">
+  <defs>
+    <linearGradient id="cmafGradD" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFC069"/>
+      <stop offset="100%" stop-color="#FC9900"/>
+    </linearGradient>
+    <linearGradient id="deltaGradD" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#A8DCF2"/>
+      <stop offset="100%" stop-color="#61B5E5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- LEFT: three full CMAF chunks (sender side).
+       Brighter moof stripe + 0.85-opacity mdat slab for legibility on dark. -->
+  <g transform="translate(4,10)">
+    <g transform="translate(0,0)">
+      <rect x="0" y="0"  width="22" height="10" rx="2" fill="url(#cmafGradD)"/>
+      <rect x="0" y="12" width="22" height="48" rx="2" fill="url(#cmafGradD)" opacity="0.78"/>
+    </g>
+    <g transform="translate(28,0)">
+      <rect x="0" y="0"  width="22" height="10" rx="2" fill="url(#cmafGradD)"/>
+      <rect x="0" y="12" width="22" height="48" rx="2" fill="url(#cmafGradD)" opacity="0.78"/>
+    </g>
+    <g transform="translate(56,0)">
+      <rect x="0" y="0"  width="22" height="10" rx="2" fill="url(#cmafGradD)"/>
+      <rect x="0" y="12" width="22" height="48" rx="2" fill="url(#cmafGradD)" opacity="0.78"/>
+    </g>
+  </g>
+
+  <!-- Compress wedge: stroke-only so it reads against any dark background. -->
+  <g transform="translate(90,16)" fill="none" stroke="#cfcfcf" stroke-width="1.5" stroke-linejoin="round">
+    <path d="M0 0 L30 18 L30 30 L0 48 Z"/>
+  </g>
+
+  <!-- CENTER: tiny delta blocks on the wire. -->
+  <g transform="translate(128,32)">
+    <rect x="0"  y="0" width="10" height="16" rx="1.5" fill="url(#deltaGradD)"/>
+    <rect x="14" y="0" width="10" height="16" rx="1.5" fill="url(#deltaGradD)"/>
+    <rect x="28" y="0" width="10" height="16" rx="1.5" fill="url(#deltaGradD)"/>
+  </g>
+
+  <!-- Decompress wedge. -->
+  <g transform="translate(176,16)" fill="none" stroke="#cfcfcf" stroke-width="1.5" stroke-linejoin="round">
+    <path d="M0 18 L30 0 L30 48 L0 30 Z"/>
+  </g>
+
+  <!-- RIGHT: reconstructed CMAF chunks. -->
+  <g transform="translate(214,10)">
+    <g transform="translate(0,0)">
+      <rect x="0" y="0"  width="22" height="10" rx="2" fill="url(#cmafGradD)"/>
+      <rect x="0" y="12" width="22" height="48" rx="2" fill="url(#cmafGradD)" opacity="0.78"/>
+    </g>
+    <g transform="translate(28,0)">
+      <rect x="0" y="0"  width="22" height="10" rx="2" fill="url(#cmafGradD)"/>
+      <rect x="0" y="12" width="22" height="48" rx="2" fill="url(#cmafGradD)" opacity="0.78"/>
+    </g>
+    <g transform="translate(56,0)">
+      <rect x="0" y="0"  width="22" height="10" rx="2" fill="url(#cmafGradD)"/>
+      <rect x="0" y="12" width="22" height="48" rx="2" fill="url(#cmafGradD)" opacity="0.78"/>
+    </g>
+  </g>
+
+  <!-- Labels in light gray for high-contrast readability on dark. -->
+  <g font-family="ui-monospace, Menlo, Consolas, monospace" font-size="7" fill="#cfcfcf" text-anchor="middle">
+    <text x="43"  y="78">CMAF</text>
+    <text x="143" y="78">on wire</text>
+    <text x="257" y="78">CMAF</text>
+  </g>
+</svg>

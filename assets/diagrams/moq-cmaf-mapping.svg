@@ -1,0 +1,162 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 340"
+     role="img" aria-label="MoQ groups and objects map one-to-one onto CMAF segments and chunks. Each CMAF chunk has a moof header, an 8-byte mdat header, and a raw mdat payload; LOCMAF replaces the moof+header with a small cyan header (full or delta) while leaving the mdat data unchanged.">
+  <style>
+    .lbl       { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; fill: #d0d0d0; }
+    .hi        { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; fill: #FC9900; }
+    .cy        { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; fill: #61B5E5; }
+    .small     { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 9px;  fill: #9a9a9a; }
+    .row-title { font-family: 'LevelOne','Helvetica Neue',Arial,sans-serif; font-size: 14px; fill: #ffffff; }
+    .legend    { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 10px; fill: #cfcfcf; }
+  </style>
+
+  <!--
+    Convention:
+      moof          → orange #FC9900       (top stripe, 14 px)
+      mdat header   → muted orange #B87830 (thin band, 6 px, no label per user)
+      mdat data     → gray   #646464 @0.7   (data slab, 36 px)
+      LOCMAF header → cyan   #61B5E5        (full = 14 px tall, delta = 4 px tall)
+  -->
+
+  <!-- ============ TOP ROW: CMAF on the sender side ============ -->
+  <text x="24" y="32" class="row-title">CMAF on the sender side</text>
+  <g transform="translate(24,56)">
+    <!-- Segment 1: dashed orange outline. -->
+    <rect x="0" y="0" width="220" height="80" rx="6" fill="none" stroke="#FC9900" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="110" y="-4" class="hi" text-anchor="middle">segment 1 · IDR</text>
+    <g transform="translate(12,12)">
+      <!-- 5 chunks within segment 1.  Each chunk is 36 wide × 56 tall. -->
+      <g transform="translate(0,0)">
+        <rect x="0" y="0"  width="36" height="14" rx="2" fill="#FC9900"/>
+        <rect x="0" y="14" width="36" height="6"  fill="#B87830"/>
+        <rect x="0" y="20" width="36" height="36" rx="2" fill="#646464" opacity="0.7"/>
+      </g>
+      <g transform="translate(42,0)">
+        <rect x="0" y="0"  width="36" height="14" rx="2" fill="#FC9900"/>
+        <rect x="0" y="14" width="36" height="6"  fill="#B87830"/>
+        <rect x="0" y="20" width="36" height="36" rx="2" fill="#646464" opacity="0.7"/>
+      </g>
+      <g transform="translate(84,0)">
+        <rect x="0" y="0"  width="36" height="14" rx="2" fill="#FC9900"/>
+        <rect x="0" y="14" width="36" height="6"  fill="#B87830"/>
+        <rect x="0" y="20" width="36" height="36" rx="2" fill="#646464" opacity="0.7"/>
+      </g>
+      <g transform="translate(126,0)">
+        <rect x="0" y="0"  width="36" height="14" rx="2" fill="#FC9900"/>
+        <rect x="0" y="14" width="36" height="6"  fill="#B87830"/>
+        <rect x="0" y="20" width="36" height="36" rx="2" fill="#646464" opacity="0.7"/>
+      </g>
+      <g transform="translate(168,0)">
+        <rect x="0" y="0"  width="20" height="14" rx="2" fill="#FC9900"/>
+        <rect x="0" y="14" width="20" height="6"  fill="#B87830"/>
+        <rect x="0" y="20" width="20" height="36" rx="2" fill="#646464" opacity="0.7"/>
+      </g>
+    </g>
+
+    <!-- Segment 2 -->
+    <rect x="248" y="0" width="220" height="80" rx="6" fill="none" stroke="#FC9900" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="358" y="-4" class="hi" text-anchor="middle">segment 2 · IDR</text>
+    <g transform="translate(260,12)">
+      <g transform="translate(0,0)"><rect x="0" y="0" width="36" height="14" rx="2" fill="#FC9900"/><rect x="0" y="14" width="36" height="6" fill="#B87830"/><rect x="0" y="20" width="36" height="36" rx="2" fill="#646464" opacity="0.7"/></g>
+      <g transform="translate(42,0)"><rect x="0" y="0" width="36" height="14" rx="2" fill="#FC9900"/><rect x="0" y="14" width="36" height="6" fill="#B87830"/><rect x="0" y="20" width="36" height="36" rx="2" fill="#646464" opacity="0.7"/></g>
+      <g transform="translate(84,0)"><rect x="0" y="0" width="36" height="14" rx="2" fill="#FC9900"/><rect x="0" y="14" width="36" height="6" fill="#B87830"/><rect x="0" y="20" width="36" height="36" rx="2" fill="#646464" opacity="0.7"/></g>
+      <g transform="translate(126,0)"><rect x="0" y="0" width="36" height="14" rx="2" fill="#FC9900"/><rect x="0" y="14" width="36" height="6" fill="#B87830"/><rect x="0" y="20" width="36" height="36" rx="2" fill="#646464" opacity="0.7"/></g>
+      <g transform="translate(168,0)"><rect x="0" y="0" width="20" height="14" rx="2" fill="#FC9900"/><rect x="0" y="14" width="20" height="6" fill="#B87830"/><rect x="0" y="20" width="20" height="36" rx="2" fill="#646464" opacity="0.7"/></g>
+    </g>
+
+    <!-- Segment 3 (truncated) -->
+    <rect x="496" y="0" width="156" height="80" rx="6" fill="none" stroke="#FC9900" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="574" y="-4" class="hi" text-anchor="middle">segment 3 …</text>
+    <g transform="translate(508,12)">
+      <g transform="translate(0,0)"><rect x="0" y="0" width="36" height="14" rx="2" fill="#FC9900"/><rect x="0" y="14" width="36" height="6" fill="#B87830"/><rect x="0" y="20" width="36" height="36" rx="2" fill="#646464" opacity="0.7"/></g>
+      <g transform="translate(42,0)"><rect x="0" y="0" width="36" height="14" rx="2" fill="#FC9900"/><rect x="0" y="14" width="36" height="6" fill="#B87830"/><rect x="0" y="20" width="36" height="36" rx="2" fill="#646464" opacity="0.7"/></g>
+      <g transform="translate(84,0)"><rect x="0" y="0" width="36" height="14" rx="2" fill="#FC9900"/><rect x="0" y="14" width="36" height="6" fill="#B87830"/><rect x="0" y="20" width="36" height="36" rx="2" fill="#646464" opacity="0.7"/></g>
+    </g>
+
+    <text x="660" y="42" class="lbl">…</text>
+  </g>
+
+  <!-- Connector dotted lines top → bottom -->
+  <g stroke="#646464" stroke-width="1" stroke-dasharray="2 3" fill="none">
+    <line x1="135" y1="142" x2="135" y2="210"/>
+    <line x1="383" y1="142" x2="383" y2="210"/>
+    <line x1="586" y1="142" x2="586" y2="210"/>
+  </g>
+
+  <!-- Top-row legend (moof + mdat data; the 8 B mdat header band is intentionally unlabelled). -->
+  <g transform="translate(24,150)">
+    <rect x="0"   y="2" width="11" height="8" fill="#FC9900"/>
+    <text x="18"  y="10" class="legend">moof</text>
+    <rect x="78"  y="2" width="11" height="8" fill="#646464" opacity="0.7"/>
+    <text x="96"  y="10" class="legend">mdat data</text>
+  </g>
+
+  <!-- ============ BOTTOM ROW: MoQ Transport stream / LOCMAF on the wire ============ -->
+  <text x="24" y="200" class="row-title">MoQ Transport stream</text>
+  <g transform="translate(24,216)">
+    <!-- Group 1.  Chunks align by mdat-data bottom (y=68 inside group box). -->
+    <rect x="0" y="0" width="220" height="80" rx="6" fill="none" stroke="#61B5E5" stroke-width="1.5"/>
+    <text x="110" y="-4" class="cy" text-anchor="middle">MoQ group 1 · 5 objects</text>
+    <g transform="translate(12,12)">
+      <!-- Object 0: full LOCMAF (14 tall) + mdat data (36) = 50 tall, top at y=6 so bottom aligns at y=56. -->
+      <g transform="translate(0,6)">
+        <rect x="0" y="0"  width="36" height="14" rx="2" fill="#61B5E5"/>
+        <rect x="0" y="14" width="36" height="36" rx="2" fill="#646464" opacity="0.7"/>
+      </g>
+      <text x="18" y="20" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#0a0a0a" text-anchor="middle">full</text>
+      <!-- Objects 1..4: delta LOCMAF (4 tall) + mdat data (36) = 40 tall, top at y=16. -->
+      <g transform="translate(42,16)">
+        <rect x="0" y="0"  width="36" height="4"  rx="1" fill="#61B5E5"/>
+        <rect x="0" y="4"  width="36" height="36" rx="2" fill="#646464" opacity="0.7"/>
+      </g>
+      <g transform="translate(84,16)">
+        <rect x="0" y="0"  width="36" height="4"  rx="1" fill="#61B5E5"/>
+        <rect x="0" y="4"  width="36" height="36" rx="2" fill="#646464" opacity="0.7"/>
+      </g>
+      <g transform="translate(126,16)">
+        <rect x="0" y="0"  width="36" height="4"  rx="1" fill="#61B5E5"/>
+        <rect x="0" y="4"  width="36" height="36" rx="2" fill="#646464" opacity="0.7"/>
+      </g>
+      <g transform="translate(168,16)">
+        <rect x="0" y="0"  width="20" height="4"  rx="1" fill="#61B5E5"/>
+        <rect x="0" y="4"  width="20" height="36" rx="2" fill="#646464" opacity="0.7"/>
+      </g>
+      <text x="52" y="26" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#cfcfcf" text-anchor="middle">Δ</text>
+      <text x="94" y="26" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#cfcfcf" text-anchor="middle">Δ</text>
+      <text x="136" y="26" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#cfcfcf" text-anchor="middle">Δ</text>
+      <text x="178" y="26" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#cfcfcf" text-anchor="middle">Δ</text>
+    </g>
+
+    <!-- Group 2 -->
+    <rect x="248" y="0" width="220" height="80" rx="6" fill="none" stroke="#61B5E5" stroke-width="1.5"/>
+    <text x="358" y="-4" class="cy" text-anchor="middle">MoQ group 2 · 5 objects</text>
+    <g transform="translate(260,12)">
+      <g transform="translate(0,6)"><rect x="0" y="0" width="36" height="14" rx="2" fill="#61B5E5"/><rect x="0" y="14" width="36" height="36" rx="2" fill="#646464" opacity="0.7"/></g>
+      <g transform="translate(42,16)"><rect x="0" y="0" width="36" height="4" rx="1" fill="#61B5E5"/><rect x="0" y="4" width="36" height="36" rx="2" fill="#646464" opacity="0.7"/></g>
+      <g transform="translate(84,16)"><rect x="0" y="0" width="36" height="4" rx="1" fill="#61B5E5"/><rect x="0" y="4" width="36" height="36" rx="2" fill="#646464" opacity="0.7"/></g>
+      <g transform="translate(126,16)"><rect x="0" y="0" width="36" height="4" rx="1" fill="#61B5E5"/><rect x="0" y="4" width="36" height="36" rx="2" fill="#646464" opacity="0.7"/></g>
+      <g transform="translate(168,16)"><rect x="0" y="0" width="20" height="4" rx="1" fill="#61B5E5"/><rect x="0" y="4" width="20" height="36" rx="2" fill="#646464" opacity="0.7"/></g>
+    </g>
+
+    <!-- Group 3 (truncated) -->
+    <rect x="496" y="0" width="156" height="80" rx="6" fill="none" stroke="#61B5E5" stroke-width="1.5"/>
+    <text x="574" y="-4" class="cy" text-anchor="middle">MoQ group 3 …</text>
+    <g transform="translate(508,12)">
+      <g transform="translate(0,6)"><rect x="0" y="0" width="36" height="14" rx="2" fill="#61B5E5"/><rect x="0" y="14" width="36" height="36" rx="2" fill="#646464" opacity="0.7"/></g>
+      <g transform="translate(42,16)"><rect x="0" y="0" width="36" height="4" rx="1" fill="#61B5E5"/><rect x="0" y="4" width="36" height="36" rx="2" fill="#646464" opacity="0.7"/></g>
+      <g transform="translate(84,16)"><rect x="0" y="0" width="36" height="4" rx="1" fill="#61B5E5"/><rect x="0" y="4" width="36" height="36" rx="2" fill="#646464" opacity="0.7"/></g>
+    </g>
+
+    <text x="660" y="42" class="lbl">…</text>
+  </g>
+
+  <!-- Bottom-row legend (LOCMAF framing + mdat data, no change). -->
+  <g transform="translate(24,310)">
+    <rect x="0"   y="2" width="11" height="8" fill="#61B5E5"/>
+    <text x="18"  y="10" class="legend">LOCMAF header (full bigger than Δ)</text>
+    <rect x="246" y="2" width="11" height="8" fill="#646464" opacity="0.7"/>
+    <text x="264" y="10" class="legend">mdat data — same bytes as above</text>
+  </g>
+
+  <!-- Bottom note. -->
+  <text x="24" y="332" class="small">one MoQ group = one CMAF segment   ·   one MoQ object = one CMAF chunk (LOCMAF header + mdat data)</text>
+</svg>

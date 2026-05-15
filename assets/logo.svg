@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 140" role="img" aria-label="LOCMAF — Low Overhead CMAF for MOQ.">
+  <defs>
+    <linearGradient id="cmafGrad2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFB347"/>
+      <stop offset="100%" stop-color="#FC9900"/>
+    </linearGradient>
+    <linearGradient id="deltaGrad2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9BD2EF"/>
+      <stop offset="100%" stop-color="#61B5E5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- LEFT: big CMAF chunks. -->
+  <g transform="translate(8,28)">
+    <g transform="translate(0,0)">
+      <rect x="0" y="0"  width="32" height="14" rx="2" fill="url(#cmafGrad2)" opacity="0.95"/>
+      <rect x="0" y="16" width="32" height="68" rx="2" fill="url(#cmafGrad2)" opacity="0.55"/>
+    </g>
+    <g transform="translate(40,0)">
+      <rect x="0" y="0"  width="32" height="14" rx="2" fill="url(#cmafGrad2)" opacity="0.95"/>
+      <rect x="0" y="16" width="32" height="68" rx="2" fill="url(#cmafGrad2)" opacity="0.55"/>
+    </g>
+    <g transform="translate(80,0)">
+      <rect x="0" y="0"  width="32" height="14" rx="2" fill="url(#cmafGrad2)" opacity="0.95"/>
+      <rect x="0" y="16" width="32" height="68" rx="2" fill="url(#cmafGrad2)" opacity="0.55"/>
+    </g>
+  </g>
+
+  <g font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#9a9a9a">
+    <text x="24" y="22" text-anchor="middle">moof</text>
+    <text x="24" y="128" text-anchor="middle">mdat</text>
+  </g>
+
+  <!-- Compress wedge. -->
+  <g transform="translate(132,40)">
+    <path d="M0 0 L42 24 L42 40 L0 64 Z" fill="#646464" fill-opacity="0.18" stroke="#9a9a9a" stroke-width="1.25"/>
+  </g>
+
+  <!-- Tiny deltas. -->
+  <g transform="translate(186,60)">
+    <rect x="0"  y="0" width="14" height="22" rx="2" fill="url(#deltaGrad2)"/>
+    <rect x="20" y="0" width="14" height="22" rx="2" fill="url(#deltaGrad2)"/>
+    <rect x="40" y="0" width="14" height="22" rx="2" fill="url(#deltaGrad2)"/>
+  </g>
+
+  <!-- Decompress wedge. -->
+  <g transform="translate(254,40)">
+    <path d="M0 24 L42 0 L42 64 L0 40 Z" fill="#646464" fill-opacity="0.18" stroke="#9a9a9a" stroke-width="1.25"/>
+  </g>
+
+  <!-- RIGHT: reconstructed big chunks. -->
+  <g transform="translate(304,28)">
+    <g transform="translate(0,0)">
+      <rect x="0" y="0"  width="32" height="14" rx="2" fill="url(#cmafGrad2)" opacity="0.95"/>
+      <rect x="0" y="16" width="32" height="68" rx="2" fill="url(#cmafGrad2)" opacity="0.55"/>
+    </g>
+    <g transform="translate(40,0)">
+      <rect x="0" y="0"  width="32" height="14" rx="2" fill="url(#cmafGrad2)" opacity="0.95"/>
+      <rect x="0" y="16" width="32" height="68" rx="2" fill="url(#cmafGrad2)" opacity="0.55"/>
+    </g>
+    <g transform="translate(80,0)">
+      <rect x="0" y="0"  width="32" height="14" rx="2" fill="url(#cmafGrad2)" opacity="0.95"/>
+      <rect x="0" y="16" width="32" height="68" rx="2" fill="url(#cmafGrad2)" opacity="0.55"/>
+    </g>
+  </g>
+
+  <!-- Wordmark. -->
+  <g transform="translate(448,0)">
+    <text x="0" y="82" font-family="'LevelOne','Helvetica Neue',Arial,sans-serif"
+          font-size="62" font-weight="700" letter-spacing="2" fill="#FFFFFF">LOCMAF</text>
+    <text x="2" y="112" font-family="'LevelOne','Helvetica Neue',Arial,sans-serif"
+          font-size="14" letter-spacing="2" fill="#61B5E5">LOW OVERHEAD CMAF FOR MOQ</text>
+  </g>
+</svg>

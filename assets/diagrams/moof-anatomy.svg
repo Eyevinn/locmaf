@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 380"
+     role="img" aria-label="Anatomy of a CMAF moof: which fields LOCMAF omits, deltas, or keeps verbatim.">
+  <style>
+    .title { font-family: 'LevelOne','Helvetica Neue',Arial,sans-serif; font-size: 14px; fill: #ffffff; }
+    .field { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; fill: #e0e0e0; }
+    .note  { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 10px; fill: #9a9a9a; }
+    .legend { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; fill: #d0d0d0; }
+  </style>
+
+  <!-- Source moof on the left. Box widened to 400 px so field-name and
+       note columns don't collide. -->
+  <text x="24" y="28" class="title">Source CMAF moof (~100 + 4·N bytes)</text>
+  <g transform="translate(24,40)">
+    <rect x="0" y="0" width="400" height="316" rx="8" fill="#1f1f1f" stroke="#646464" stroke-width="1"/>
+
+    <!-- mfhd -->
+    <rect x="12" y="14" width="376" height="26" rx="4" fill="#33aa55" opacity="0.18" stroke="#33aa55"/>
+    <text x="24"  y="32" class="field">mfhd · sequence_number</text>
+    <text x="376" y="32" class="note" text-anchor="end">omitted</text>
+
+    <!-- traf header (tfhd) -->
+    <rect x="12" y="48" width="376" height="78" rx="4" fill="#33aa55" opacity="0.18" stroke="#33aa55"/>
+    <text x="24" y="66"  class="field">tfhd · default_sample_duration</text>
+    <text x="24" y="82"  class="field">tfhd · default_sample_size</text>
+    <text x="24" y="98"  class="field">tfhd · default_sample_flags</text>
+    <text x="24" y="116" class="field">tfhd · sample_description_index</text>
+    <text x="376" y="66"  class="note" text-anchor="end">= trex → omit</text>
+    <text x="376" y="82"  class="note" text-anchor="end">= trex → omit</text>
+    <text x="376" y="98"  class="note" text-anchor="end">= trex → omit</text>
+    <text x="376" y="116" class="note" text-anchor="end">= trex → omit</text>
+
+    <!-- tfdt -->
+    <rect x="12" y="134" width="376" height="26" rx="4" fill="#61B5E5" opacity="0.18" stroke="#61B5E5"/>
+    <text x="24"  y="152" class="field">tfdt · base_media_decode_time</text>
+    <text x="376" y="152" class="note" text-anchor="end">derived</text>
+
+    <!-- trun headers -->
+    <rect x="12" y="168" width="376" height="42" rx="4" fill="#33aa55" opacity="0.18" stroke="#33aa55"/>
+    <text x="24"  y="186" class="field">trun · sample_count</text>
+    <text x="24"  y="202" class="field">trun · data_offset</text>
+    <text x="376" y="186" class="note" text-anchor="end">scalar</text>
+    <text x="376" y="202" class="note" text-anchor="end">implicit</text>
+
+    <!-- trun per-sample -->
+    <rect x="12" y="218" width="376" height="86" rx="4" fill="#FC9900" opacity="0.18" stroke="#FC9900"/>
+    <text x="24"  y="236" class="field">trun.samples[i].duration</text>
+    <text x="24"  y="252" class="field">trun.samples[i].flags</text>
+    <text x="24"  y="268" class="field">trun.samples[i].comp_time_offset</text>
+    <text x="24"  y="284" class="field">trun.samples[i].size</text>
+    <text x="376" y="236" class="note" text-anchor="end">default → omit</text>
+    <text x="376" y="252" class="note" text-anchor="end">default → omit</text>
+    <text x="376" y="268" class="note" text-anchor="end">B-frame only</text>
+    <text x="376" y="284" class="note" text-anchor="end">keep · varies/sample</text>
+  </g>
+
+  <!-- Arrow. -->
+  <g transform="translate(440,180)">
+    <path d="M0 0 L40 0" stroke="#FC9900" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M32 -6 L42 0 L32 6" stroke="#FC9900" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="20" y="-12" font-family="'LevelOne','Helvetica Neue',Arial,sans-serif" font-size="11" fill="#FC9900" text-anchor="middle">LOCMAF</text>
+  </g>
+
+  <!-- LOCMAF delta moof on the right. -->
+  <text x="492" y="28" class="title">LOCMAF delta moof (steady state: 2 B)</text>
+  <g transform="translate(492,40)">
+    <rect x="0" y="0" width="364" height="316" rx="8" fill="#1f1f1f" stroke="#646464" stroke-width="1"/>
+
+    <rect x="12" y="14"  width="340" height="26" rx="4" fill="#61B5E5" opacity="0.22" stroke="#61B5E5"/>
+    <text x="24" y="32" class="field">MoofDeltaHeader = 25  (1 B)</text>
+
+    <rect x="12" y="48"  width="340" height="26" rx="4" fill="#61B5E5" opacity="0.22" stroke="#61B5E5"/>
+    <text x="24" y="66" class="field">properties_length = 0  (1 B)</text>
+
+    <rect x="12" y="82"  width="340" height="40" rx="4" fill="#61B5E5" opacity="0.18" stroke="#61B5E5"/>
+    <text x="24" y="100" class="field">(no changed fields — implicit)</text>
+    <text x="24" y="114" class="note">  bmdt = prev_bmdt + Σ prev_durations</text>
+
+    <rect x="12" y="130" width="340" height="40" rx="4" fill="#33aa55" opacity="0.18" stroke="#33aa55"/>
+    <text x="24" y="148" class="field">mdat payload (raw bytes)</text>
+    <text x="24" y="162" class="note">  no `size + 'mdat'` header — implied</text>
+
+    <rect x="12" y="180" width="340" height="120" rx="4" fill="none" stroke="#444" stroke-dasharray="3 3"/>
+    <text x="24" y="200" class="field">on IDR / discontinuity, the delta emits:</text>
+    <text x="36" y="220" class="note">moofSampleFlags  (delta from previous)</text>
+    <text x="36" y="238" class="note">moofFirstSampleFlags  (or deletion)</text>
+    <text x="36" y="256" class="note">moofBaseMediaDecodeTime  (absolute)</text>
+    <text x="24" y="282" class="field">→ ~4–5 B at the transition,</text>
+    <text x="24" y="298" class="field">   back to 2 B immediately after.</text>
+  </g>
+
+  <!-- Legend with more horizontal spread so swatch and text don't collide. -->
+  <g transform="translate(24,366)">
+    <rect x="0"   y="0" width="12" height="12" fill="#33aa55" opacity="0.4" stroke="#33aa55"/>
+    <text x="18"  y="10" class="legend">omitted (trex / implicit)</text>
+    <rect x="280" y="0" width="12" height="12" fill="#61B5E5" opacity="0.4" stroke="#61B5E5"/>
+    <text x="298" y="10" class="legend">derived from previous moof</text>
+    <rect x="580" y="0" width="12" height="12" fill="#FC9900" opacity="0.4" stroke="#FC9900"/>
+    <text x="598" y="10" class="legend">emitted on the wire</text>
+  </g>
+</svg>

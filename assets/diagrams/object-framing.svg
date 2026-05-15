@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 260"
+     role="img" aria-label="LOCMAF object framing: header_id, properties_length, properties, mdat payload.">
+  <style>
+    .title { font-family: 'LevelOne','Helvetica Neue',Arial,sans-serif; font-size: 14px; fill: #ffffff; }
+    .field { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; fill: #1a1a1a; font-weight: 700; }
+    .bytes { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; fill: #FFFFFF; }
+    .note  { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 10px; fill: #9a9a9a; }
+  </style>
+
+  <text x="24" y="28" class="title">LOCMAF object framing</text>
+
+  <g transform="translate(40,60)">
+    <!-- header_id (varint) — LOCMAF framing, cyan. -->
+    <rect x="0" y="0" width="120" height="80" rx="6" fill="#61B5E5"/>
+    <text x="60"  y="34" class="field" text-anchor="middle">header_id</text>
+    <text x="60"  y="54" class="field" text-anchor="middle">(varint)</text>
+    <text x="60"  y="100" class="note" text-anchor="middle">1 B</text>
+    <text x="60"  y="116" class="note" text-anchor="middle">23 / 25 / 21</text>
+
+    <!-- properties_length (varint) — LOCMAF framing, cyan. -->
+    <rect x="132" y="0" width="140" height="80" rx="6" fill="#61B5E5" opacity="0.85"/>
+    <text x="202" y="30" class="field" text-anchor="middle">properties_</text>
+    <text x="202" y="46" class="field" text-anchor="middle">length</text>
+    <text x="202" y="62" class="field" text-anchor="middle">(varint)</text>
+    <text x="202" y="100" class="note" text-anchor="middle">1 B</text>
+    <text x="202" y="116" class="note" text-anchor="middle">often 0</text>
+
+    <!-- properties block — LOCMAF payload (delta-encoded fields), cyan. -->
+    <rect x="284" y="0" width="180" height="80" rx="6" fill="#61B5E5" opacity="0.7"/>
+    <text x="374" y="34" class="field" text-anchor="middle">properties</text>
+    <text x="374" y="54" class="field" text-anchor="middle">(field_id, value)*</text>
+    <text x="374" y="100" class="note" text-anchor="middle">0..N B</text>
+    <text x="374" y="116" class="note" text-anchor="middle">delta-encoded</text>
+
+    <!-- mdat raw payload — sample bytes, gray. -->
+    <rect x="476" y="0" width="324" height="80" rx="6" fill="#646464" opacity="0.6"/>
+    <text x="638" y="44" class="field" text-anchor="middle" fill="#FFFFFF">mdat raw payload (sample bytes)</text>
+    <text x="638" y="100" class="note" text-anchor="middle">= MoQ object length − everything above</text>
+    <text x="638" y="116" class="note" text-anchor="middle">no `size + 'mdat'` header on the wire</text>
+  </g>
+
+  <!-- Bottom annotation, wrapped onto two lines so nothing gets clipped. -->
+  <text x="40" y="216" class="note">Every LOCMAF object is self-delimited by the MoQ object length.</text>
+  <text x="40" y="232" class="note">Unknown header_id values are logged and skipped using properties_length — forward-compatible.</text>
+</svg>

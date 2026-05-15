@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 80" role="img" aria-label="LOCMAF logomark: CMAF chunks compressed into delta blocks on the wire, then decompressed back to identical CMAF chunks.">
+  <defs>
+    <linearGradient id="cmafGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFB347"/>
+      <stop offset="100%" stop-color="#FC9900"/>
+    </linearGradient>
+    <linearGradient id="deltaGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9BD2EF"/>
+      <stop offset="100%" stop-color="#61B5E5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- LEFT: three full CMAF chunks (sender side). -->
+  <g transform="translate(4,10)">
+    <g transform="translate(0,0)">
+      <rect x="0" y="0"  width="22" height="10" rx="2" fill="url(#cmafGrad)" opacity="0.95"/>
+      <rect x="0" y="12" width="22" height="48" rx="2" fill="url(#cmafGrad)" opacity="0.55"/>
+    </g>
+    <g transform="translate(28,0)">
+      <rect x="0" y="0"  width="22" height="10" rx="2" fill="url(#cmafGrad)" opacity="0.95"/>
+      <rect x="0" y="12" width="22" height="48" rx="2" fill="url(#cmafGrad)" opacity="0.55"/>
+    </g>
+    <g transform="translate(56,0)">
+      <rect x="0" y="0"  width="22" height="10" rx="2" fill="url(#cmafGrad)" opacity="0.95"/>
+      <rect x="0" y="12" width="22" height="48" rx="2" fill="url(#cmafGrad)" opacity="0.55"/>
+    </g>
+  </g>
+
+  <!-- Compress wedge (narrowing). -->
+  <g transform="translate(90,16)">
+    <path d="M0 0 L30 18 L30 30 L0 48 Z" fill="#646464" fill-opacity="0.18" stroke="#9a9a9a" stroke-width="1"/>
+  </g>
+
+  <!-- CENTER: tiny delta blocks (on the wire). -->
+  <g transform="translate(128,32)">
+    <rect x="0"  y="0" width="10" height="16" rx="1.5" fill="url(#deltaGrad)"/>
+    <rect x="14" y="0" width="10" height="16" rx="1.5" fill="url(#deltaGrad)"/>
+    <rect x="28" y="0" width="10" height="16" rx="1.5" fill="url(#deltaGrad)"/>
+  </g>
+
+  <!-- Decompress wedge (widening). -->
+  <g transform="translate(176,16)">
+    <path d="M0 18 L30 0 L30 48 L0 30 Z" fill="#646464" fill-opacity="0.18" stroke="#9a9a9a" stroke-width="1"/>
+  </g>
+
+  <!-- RIGHT: three reconstructed CMAF chunks (receiver side, identical samples). -->
+  <g transform="translate(214,10)">
+    <g transform="translate(0,0)">
+      <rect x="0" y="0"  width="22" height="10" rx="2" fill="url(#cmafGrad)" opacity="0.95"/>
+      <rect x="0" y="12" width="22" height="48" rx="2" fill="url(#cmafGrad)" opacity="0.55"/>
+    </g>
+    <g transform="translate(28,0)">
+      <rect x="0" y="0"  width="22" height="10" rx="2" fill="url(#cmafGrad)" opacity="0.95"/>
+      <rect x="0" y="12" width="22" height="48" rx="2" fill="url(#cmafGrad)" opacity="0.55"/>
+    </g>
+    <g transform="translate(56,0)">
+      <rect x="0" y="0"  width="22" height="10" rx="2" fill="url(#cmafGrad)" opacity="0.95"/>
+      <rect x="0" y="12" width="22" height="48" rx="2" fill="url(#cmafGrad)" opacity="0.55"/>
+    </g>
+  </g>
+
+  <!-- Labels under each stage. -->
+  <g font-family="ui-monospace, Menlo, Consolas, monospace" font-size="7" fill="#9a9a9a" text-anchor="middle">
+    <text x="43" y="78">CMAF</text>
+    <text x="143" y="78">on wire</text>
+    <text x="257" y="78">CMAF</text>
+  </g>
+</svg>

@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 280"
+     role="img" aria-label="LOCMAF delta stream timeline: full moof followed by 2-byte deltas in steady state.">
+  <style>
+    .lbl   { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; fill: #d0d0d0; }
+    .small { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 10px; fill: #9a9a9a; }
+    .title { font-family: 'LevelOne','Helvetica Neue',Arial,sans-serif; font-size: 14px; fill: #ffffff; }
+    .hi    { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; fill: #FC9900; }
+  </style>
+
+  <text x="24" y="26" class="title">One MoQ group on the wire — sample-level fragmentation</text>
+
+  <!-- Object 0: full LOCMAF (cyan, like every other LOCMAF header). -->
+  <g transform="translate(48,60)">
+    <rect x="0" y="0" width="90" height="84" rx="4" fill="#61B5E5"/>
+    <text x="45" y="22" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11" fill="#0a0a0a" font-weight="700" text-anchor="middle">full moof</text>
+    <text x="45" y="40" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle">MoofHeader=23</text>
+    <text x="45" y="56" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle">+ count + bmdt</text>
+    <text x="45" y="70" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle">+ first_flags</text>
+    <text x="45" y="102" class="small" text-anchor="middle">~8–20 B</text>
+  </g>
+
+  <!-- Object 1: delta with IDR-transition deletion of id 12. Box widened to fit text. -->
+  <g transform="translate(156,88)">
+    <rect x="0" y="0" width="84" height="56" rx="4" fill="#61B5E5" opacity="0.9"/>
+    <text x="42" y="22" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11" fill="#0a0a0a" text-anchor="middle">delta</text>
+    <text x="42" y="40" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#0a0a0a" text-anchor="middle">delete id 12</text>
+    <text x="42" y="74" class="small" text-anchor="middle">~4–5 B</text>
+  </g>
+
+  <!-- Objects 2..N-1: 2B deltas (steady state run). -->
+  <g transform="translate(258,114)">
+    <rect x="0"   y="0" width="22" height="30" rx="2" fill="#61B5E5"/>
+    <rect x="28"  y="0" width="22" height="30" rx="2" fill="#61B5E5"/>
+    <rect x="56"  y="0" width="22" height="30" rx="2" fill="#61B5E5"/>
+    <rect x="84"  y="0" width="22" height="30" rx="2" fill="#61B5E5"/>
+    <rect x="112" y="0" width="22" height="30" rx="2" fill="#61B5E5"/>
+    <rect x="140" y="0" width="22" height="30" rx="2" fill="#61B5E5"/>
+    <rect x="168" y="0" width="22" height="30" rx="2" fill="#61B5E5"/>
+    <rect x="196" y="0" width="22" height="30" rx="2" fill="#61B5E5"/>
+    <rect x="224" y="0" width="22" height="30" rx="2" fill="#61B5E5"/>
+    <rect x="252" y="0" width="22" height="30" rx="2" fill="#61B5E5"/>
+    <rect x="280" y="0" width="22" height="30" rx="2" fill="#61B5E5"/>
+    <rect x="308" y="0" width="22" height="30" rx="2" fill="#61B5E5"/>
+    <rect x="336" y="0" width="22" height="30" rx="2" fill="#61B5E5"/>
+    <rect x="364" y="0" width="22" height="30" rx="2" fill="#61B5E5"/>
+    <rect x="392" y="0" width="22" height="30" rx="2" fill="#61B5E5"/>
+    <rect x="420" y="0" width="22" height="30" rx="2" fill="#61B5E5"/>
+  </g>
+  <text x="708" y="134" class="lbl">…</text>
+  <text x="476" y="174" class="small" text-anchor="middle">2 B steady state — 16 deltas shown of 23</text>
+
+  <!-- Time axis sits cleanly below all the labels. -->
+  <line x1="40" y1="200" x2="720" y2="200" stroke="#646464" stroke-width="1"/>
+  <g stroke="#646464" stroke-width="1" fill="none">
+    <line x1="48"  y1="196" x2="48"  y2="204"/>
+    <line x1="138" y1="196" x2="138" y2="204"/>
+    <line x1="156" y1="196" x2="156" y2="204"/>
+    <line x1="240" y1="196" x2="240" y2="204"/>
+    <line x1="258" y1="196" x2="258" y2="204"/>
+    <line x1="708" y1="196" x2="708" y2="204"/>
+  </g>
+  <text x="40"  y="220" class="small">t=0</text>
+  <text x="720" y="220" class="small" text-anchor="end">→ time</text>
+
+  <!-- Summary line at the bottom, well below the axis. -->
+  <g transform="translate(40,254)">
+    <text x="0" y="0" class="lbl">25 video objects · group total: <tspan fill="#61B5E5">~58 B of LOCMAF framing</tspan> vs <tspan fill="#FC9900">2 500 B raw CMAF</tspan> — <tspan fill="#61B5E5">≈ 43:1</tspan></text>
+  </g>
+</svg>

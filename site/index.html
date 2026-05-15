@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>LOCMAF — Low Overhead CMAF for MOQ</title>
+<meta name="description" content="LOCMAF is a low-overhead wire format for streaming CMAF over MOQ Transport. It compresses consecutive moof headers by ~45:1 while reconstructing byte-identical samples at the receiver."/>
+<link rel="icon" type="image/svg+xml" href="./assets/favicon.svg"/>
+<link rel="stylesheet" href="./styles.css"/>
+<meta name="theme-color" content="#0e0e0e"/>
+<meta property="og:title" content="LOCMAF — Low Overhead CMAF for MOQ"/>
+<meta property="og:description" content="A compact wire format for CMAF over MOQ. Sample-level fragmentation, 2-byte steady-state delta moofs, lossless playback."/>
+<meta property="og:url" content="https://locmaf.dev"/>
+<meta property="og:type" content="website"/>
+</head>
+<body>
+
+<div class="topnav">
+  <div class="topnav-inner">
+    <a class="brand" href="#top">
+      <img src="./assets/favicon.svg" alt=""/>
+      <span>LOCMAF</span>
+    </a>
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="#numbers">Numbers</a>
+      <a href="#wire">Wire format</a>
+      <a href="#resources">Resources</a>
+    </nav>
+  </div>
+</div>
+
+<header class="hero" id="top">
+  <img src="./assets/logo-dark.svg" class="wordmark" alt="LOCMAF — Low Overhead CMAF for MOQ"/>
+  <div class="blurb">
+    A compact wire format for streaming CMAF over MOQ Transport.<br/>
+    Sample-level fragmentation with a <strong>2-byte steady-state delta moof</strong>,
+    reconstructed losslessly into standard CMAF chunks at the receiver.
+  </div>
+  <div class="cta-row">
+    <a class="cta primary" href="./slides/">Open the slide deck →</a>
+    <a class="cta ghost" href="https://github.com/Eyevinn/moqlivemock">GitHub</a>
+    <a class="cta ghost" href="https://moqlivemock.demo.osaas.io">Live demo</a>
+  </div>
+</header>
+
+<section class="band" id="how">
+  <div class="container">
+    <header>
+      <span class="eyebrow">The shape of the compression</span>
+      <h2>Big chunks → tiny deltas → identical big chunks</h2>
+    </header>
+    <p>
+      A typical CMAF chunk header for one sample is around <strong>~104 bytes</strong>.
+      At sample-level fragmentation rates (every video frame, every audio frame is one MoQ object), that overhead dominates the wire cost.
+      LOCMAF observes that <em>consecutive moof boxes are almost identical</em> and delta-encodes them.
+    </p>
+    <figure class="figure">
+      <img src="./assets/logomark-dark.svg" alt="A row of CMAF chunks compressed into delta blocks on the wire, then decompressed back to identical CMAF chunks." style="max-width:560px;"/>
+      <figcaption>Sender packages big CMAF chunks. The wire carries tiny deltas. The receiver rebuilds byte-identical chunks for the MSE player.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="band alt" id="mapping">
+  <div class="container">
+    <header>
+      <span class="eyebrow">MoQ ↔ CMAF</span>
+      <h2>One group per segment, one object per chunk</h2>
+    </header>
+    <p>
+      The natural mapping. Each MoQ group starts at a random-access point (IDR for video).
+      Inside a group, objects are delivered in order, and that ordering is what makes the delta stream possible.
+      Audio groups are aligned to video groups so a tune-in operation can deliver both clocks at once.
+    </p>
+    <figure class="figure">
+      <img src="./assets/diagrams/moq-cmaf-mapping.svg" alt="CMAF segments above mapped one-to-one onto MoQ groups, with each chunk mapped to one MoQ object."/>
+    </figure>
+  </div>
+</section>
+
+<section class="band" id="moof">
+  <div class="container">
+    <header>
+      <span class="eyebrow">Inside a moof</span>
+      <h2>Most fields are predictable or constant</h2>
+    </header>
+    <p>
+      Consecutive <code>moof</code> boxes differ only in a handful of fields. LOCMAF compresses in two stages:
+    </p>
+    <ul>
+      <li><strong>tfhd against trex defaults</strong> — values that already match the moov's <code>trex</code> are omitted entirely.</li>
+      <li><strong>Delta encoding within a group</strong> — the first moof per group is full; every subsequent moof carries only the fields whose value changed since the previous moof.</li>
+    </ul>
+    <p>
+      <code>base_media_decode_time</code> is derived implicitly from the previous moof's sample durations.
+      The <code>mdat</code> box header never goes on the wire — its length is implied by the MoQ object length.
+    </p>
+    <figure class="figure">
+      <img src="./assets/diagrams/moof-anatomy.svg" alt="Anatomy of a source moof showing which fields LOCMAF omits, derives, or emits as deltas."/>
+    </figure>
+  </div>
+</section>
+
+<section class="band alt" id="numbers">
+  <div class="container">
+    <header>
+      <span class="eyebrow">Empirical results</span>
+      <h2>~2.3% of CMAF wire bytes</h2>
+    </header>
+    <p>
+      Measured against <code>assets/test10s/video_400kbps_avc.mp4</code> — a 250-fragment AVC group with one sample per fragment.
+    </p>
+    <div class="grid">
+      <div class="card">
+        <div class="sub">CMAF moof total</div>
+        <div class="big">26 040 B</div>
+        <div class="sub">~104 B per fragment × 250</div>
+      </div>
+      <div class="card">
+        <div class="sub">LOCMAF object total</div>
+        <div class="big cyan">592 B</div>
+        <div class="sub">19 B full + 2.3 B average delta</div>
+      </div>
+      <div class="card">
+        <div class="sub">Compression ratio</div>
+        <div class="big cyan">45 : 1</div>
+        <div class="sub">on the moof headers themselves</div>
+      </div>
+    </div>
+    <figure class="figure" style="margin-top:32px;">
+      <img src="./assets/diagrams/bytes-saved.svg" alt="Bar chart comparing 26 040 bytes of CMAF moof overhead to 592 bytes of LOCMAF wire bytes."/>
+      <figcaption>Re-runnable via <code>go run ./cmd/locmaf roundtrip -verbose</code>.</figcaption>
+    </figure>
+    <figure class="figure">
+      <img src="./assets/diagrams/delta-stream.svg" alt="Timeline of one MoQ group: a full moof followed by a brief IDR-transition delta and then a long run of 2-byte steady-state delta moofs."/>
+    </figure>
+  </div>
+</section>
+
+<section class="band" id="wire">
+  <div class="container">
+    <header>
+      <span class="eyebrow">Wire format</span>
+      <h2>One framing for every object kind</h2>
+    </header>
+    <figure class="figure">
+      <img src="./assets/diagrams/object-framing.svg" alt="LOCMAF object framing: header_id varint, properties_length varint, properties block, mdat raw payload."/>
+    </figure>
+    <h3>Top-level object IDs</h3>
+    <table>
+      <thead><tr><th>ID</th><th>Symbol</th><th>Object kind</th></tr></thead>
+      <tbody>
+        <tr><td>21</td><td>MoovHeader</td><td>LOCMAF moov (init data in the catalog)</td></tr>
+        <tr><td>23</td><td>MoofHeader</td><td>full moof + mdat</td></tr>
+        <tr><td>25</td><td>MoofDeltaHeader</td><td>delta moof + mdat</td></tr>
+      </tbody>
+    </table>
+    <p>
+      IDs start at 21 so they don't collide with LOC's properties (1–16).
+      Unknown <code>header_id</code> values are logged and skipped using <code>properties_length</code> —
+      the format extends without breaking older decoders. Likely next additions: <code>prft</code> (wall-clock signalling), <code>sidx</code>, and a raw / gzip fallback for chunks that don't fit the delta vocabulary.
+    </p>
+    <h3>Steady-state delta moof in two bytes</h3>
+    <figure class="delta-moof">
+      <div class="row framing">
+        <div class="label">MoofDeltaHeader = 25</div>
+        <div class="size">1 B</div>
+      </div>
+      <div class="row framing">
+        <div class="label">properties_length = 0</div>
+        <div class="size">1 B</div>
+      </div>
+      <div class="row payload">
+        <div class="label">mdat raw payload …</div>
+        <div class="size">N B</div>
+      </div>
+      <figcaption>
+        <span class="swatch framing"></span> LOCMAF framing (2 B)
+        &nbsp;·&nbsp;
+        <span class="swatch payload"></span> mdat data
+      </figcaption>
+    </figure>
+    <p>
+      Two-byte LOCMAF framing carries one whole moof worth of information.
+      <code>base_media_decode_time</code> advances implicitly; per-sample fields are unchanged from the previous moof.
+    </p>
+  </div>
+</section>
+
+<section class="band alt" id="prereq">
+  <div class="container">
+    <header>
+      <span class="eyebrow">Source-side requirements</span>
+      <h2>Commensurate timescales</h2>
+    </header>
+    <p>
+      The 2-byte steady state requires every frame to have an <strong>integer duration in the chosen media timescale</strong>:
+    </p>
+    <table>
+      <thead><tr><th>stream</th><th>timescale</th><th>ticks per frame</th></tr></thead>
+      <tbody>
+        <tr><td>48 kHz AAC</td><td>48 000</td><td>1 024</td></tr>
+        <tr><td>60000/1001 fps video (NTSC)</td><td>60 000</td><td>1 001</td></tr>
+      </tbody>
+    </table>
+    <p>
+      With a mismatched timescale each frame drifts ±1 tick, and the per-sample duration array has to be sent every fragment — the 2-byte steady-state delta moof is no longer achievable.
+    </p>
+  </div>
+</section>
+
+<section class="band" id="resources">
+  <div class="container">
+    <header>
+      <span class="eyebrow">Resources</span>
+      <h2>Specification, code, and reading</h2>
+    </header>
+    <div class="res-list">
+      <a class="res" href="./slides/">
+        <span class="label">Presentation</span>
+        <span class="title">LOCMAF slide deck</span>
+        <span class="desc">A 20-slide MARP deck adapted from the LOCMAF specification.</span>
+      </a>
+      <a class="res" href="https://github.com/Eyevinn/moqlivemock">
+        <span class="label">Reference impl</span>
+        <span class="title">Eyevinn/moqlivemock</span>
+        <span class="desc">Go MoQ server and subscriber with the LOCMAF encoder and decoder.</span>
+      </a>
+      <a class="res" href="https://github.com/Eyevinn/warp-player">
+        <span class="label">Browser player</span>
+        <span class="title">Eyevinn/warp-player</span>
+        <span class="desc">Browser MoQ player with LOCMAF and EME / DRM support.</span>
+      </a>
+      <a class="res" href="https://moqlivemock.demo.osaas.io">
+        <span class="label">Live demo</span>
+        <span class="title">moqlivemock.demo.osaas.io</span>
+        <span class="desc">Public demo of the LOCMAF + DRM stack streaming over MOQT.</span>
+      </a>
+      <a class="res" href="https://datatracker.ietf.org/doc/draft-ietf-moq-cmsf/">
+        <span class="label">Spec</span>
+        <span class="title">draft-ietf-moq-cmsf</span>
+        <span class="desc">CMAF MoQ Streaming Format — the catalog LOCMAF rides in.</span>
+      </a>
+      <a class="res" href="https://datatracker.ietf.org/doc/draft-ietf-moq-loc/">
+        <span class="label">Spec</span>
+        <span class="title">draft-ietf-moq-loc</span>
+        <span class="desc">Low Overhead Container — LOCMAF's complementary format for non-CMAF media.</span>
+      </a>
+      <a class="res" href="https://datatracker.ietf.org/doc/draft-ietf-moq-transport/">
+        <span class="label">Spec</span>
+        <span class="title">draft-ietf-moq-transport</span>
+        <span class="desc">Media over QUIC Transport — the underlying transport.</span>
+      </a>
+      <a class="res" href="https://datatracker.ietf.org/doc/draft-lcurley-compressed-mp4/">
+        <span class="label">Related</span>
+        <span class="title">draft-lcurley-compressed-mp4</span>
+        <span class="desc">Compressed MP4 — generic ISOBMFF compression for init segments.</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="band alt">
+  <div class="container">
+    <div class="two-col">
+      <div>
+        <h2>Origin</h2>
+        <p>
+          LOCMAF was developed as part of Hugo Björs's KTH MSc thesis,
+          <em>Efficient DRM in MoQ using Low Overhead CMAF</em> (2026), under the
+          supervision of Torbjörn Einarsson at Eyevinn Technology.
+        </p>
+        <p>
+          The format is intended as a packaging encoding in the CMSF catalog
+          and complements the Low Overhead Container (LOC) defined by the MoQ
+          working group.
+        </p>
+      </div>
+      <div>
+        <h2>Status</h2>
+        <p>
+          This is a first version. The format may evolve based on feedback,
+          measurement on additional codecs, and the trajectory of CMSF and
+          MOQT in the IETF.
+        </p>
+        <p>
+          The reference encoder and decoder live in
+          <code>Eyevinn/moqlivemock</code> and the browser player in
+          <code>Eyevinn/warp-player</code>.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="site">
+  <div class="container">
+    <p class="eyevinn">
+      Maintained by
+      <a href="https://www.eyevinn.se" rel="noopener">
+        <img src="./assets/eyevinn-logo.png" alt="Eyevinn Technology"/>
+      </a>
+      Eyevinn Technology · 2026
+    </p>
+    <p>
+      <a href="https://github.com/Eyevinn/moqlivemock/blob/main/docs/LOCMAF.md">LOCMAF.md specification</a>
+      · <a href="./slides/">slides</a>
+      · <a href="https://github.com/Eyevinn/moqlivemock">moqlivemock</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

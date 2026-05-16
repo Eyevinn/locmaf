@@ -2,6 +2,7 @@
    Palette and typography align with the Eyevinn brand used by the Marp deck. */
 
 :root {
+  color-scheme: dark;
   --eyevinn-orange: #FC9900;
   --eyevinn-cyan:   #61B5E5;
   --eyevinn-purple: #8382A3;
@@ -95,13 +96,14 @@ li::marker { color: var(--eyevinn-orange); }
 .topnav .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-family: 'LevelOne', var(--sans);
-  font-size: 1.15rem;
-  letter-spacing: 2px;
   color: #fff;
 }
-.topnav .brand img { height: 28px; width: auto; }
+.topnav .brand img { height: 32px; width: auto; display: block; }
+.topnav-right {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
 .topnav nav a {
   margin-left: 24px;
   font-size: 0.95rem;
@@ -109,6 +111,14 @@ li::marker { color: var(--eyevinn-orange); }
   border-bottom: 1px solid transparent;
 }
 .topnav nav a:hover { color: #fff; border-bottom-color: var(--eyevinn-orange); }
+.topnav .eyevinn-cobrand { display: flex; align-items: center; }
+.topnav .eyevinn-cobrand img {
+  height: 22px;
+  width: auto;
+  opacity: 0.85;
+  transition: opacity 0.15s ease;
+}
+.topnav .eyevinn-cobrand:hover img { opacity: 1; }
 
 /* Hero. */
 .hero {
@@ -377,7 +387,9 @@ footer.site .eyevinn img { height: 18px; vertical-align: middle; }
 @media (max-width: 720px) {
   .hero { padding: 56px 18px 36px; }
   .topnav nav a { margin-left: 14px; font-size: 0.88rem; }
-  .topnav .brand span { display: none; }
+  .topnav .brand img { height: 24px; }
+  .topnav-right { gap: 14px; }
+  .topnav .eyevinn-cobrand img { height: 18px; }
   h2 { font-size: 1.5rem; }
   .card .big { font-size: 1.8rem; }
 }

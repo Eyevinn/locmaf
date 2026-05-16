@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="color-scheme" content="dark"/>
 <title>LOCMAF — Low Overhead CMAF for MOQ</title>
 <meta name="description" content="LOCMAF is a low-overhead wire format for streaming CMAF over MOQ Transport. It compresses consecutive moof headers by ~45:1 while reconstructing byte-identical samples at the receiver."/>
 <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg"/>
 <link rel="stylesheet" href="./styles.css"/>
 <meta name="theme-color" content="#0e0e0e"/>
 <meta property="og:title" content="LOCMAF — Low Overhead CMAF for MOQ"/>
-<meta property="og:description" content="A compact wire format for CMAF over MOQ. Sample-level fragmentation, 2-byte steady-state delta moofs, lossless playback."/>
+<meta property="og:description" content="A compact wire format for CMAF over MOQ — including DRM-protected content. Sample-level objects, delta moof as small as 2 bytes, functionally lossless playback."/>
 <meta property="og:url" content="https://locmaf.dev"/>
 <meta property="og:type" content="website"/>
 </head>
@@ -17,28 +18,35 @@
 
 <div class="topnav">
   <div class="topnav-inner">
-    <a class="brand" href="#top">
-      <img src="./assets/favicon.svg" alt=""/>
-      <span>LOCMAF</span>
+    <a class="brand" href="#top" aria-label="LOCMAF home">
+      <img src="./assets/wordmark-dark.svg" alt="LOCMAF"/>
     </a>
-    <nav>
-      <a href="#how">How it works</a>
-      <a href="#numbers">Numbers</a>
-      <a href="#wire">Wire format</a>
-      <a href="#resources">Resources</a>
-    </nav>
+    <div class="topnav-right">
+      <nav>
+        <a href="#how">How it works</a>
+        <a href="#numbers">Numbers</a>
+        <a href="#wire">Wire format</a>
+        <a href="#drm">DRM</a>
+        <a href="#resources">Resources</a>
+      </nav>
+      <a class="eyevinn-cobrand" href="https://www.eyevinn.se" rel="noopener" aria-label="Eyevinn Technology">
+        <img src="./assets/eyevinn-logo.png" alt="Eyevinn Technology"/>
+      </a>
+    </div>
   </div>
 </div>
 
 <header class="hero" id="top">
   <img src="./assets/logo-dark.svg" class="wordmark" alt="LOCMAF — Low Overhead CMAF for MOQ"/>
   <div class="blurb">
-    A compact wire format for streaming CMAF over MOQ Transport.<br/>
-    Sample-level fragmentation with a <strong>2-byte steady-state delta moof</strong>,
-    reconstructed losslessly into standard CMAF chunks at the receiver.
+    A new, compact wire format for streaming CMAF over MOQ Transport<br/>
+    — <strong>including DRM-protected content</strong>.
+    Sample-level objects with a delta moof <strong>as small as 2 bytes</strong>,
+    reconstructed into <strong>functionally lossless</strong> CMAF chunks at the receiver.
   </div>
   <div class="cta-row">
     <a class="cta primary" href="./slides/">Open the slide deck →</a>
+    <a class="cta ghost" href="https://github.com/Eyevinn/moqlivemock/blob/main/docs/LOCMAF.md">Spec</a>
     <a class="cta ghost" href="https://github.com/Eyevinn/moqlivemock">GitHub</a>
     <a class="cta ghost" href="https://moqlivemock.demo.osaas.io">Live demo</a>
   </div>
@@ -52,8 +60,11 @@
     </header>
     <p>
       A typical CMAF chunk header for one sample is around <strong>~104 bytes</strong>.
-      At sample-level fragmentation rates (every video frame, every audio frame is one MoQ object), that overhead dominates the wire cost.
-      LOCMAF observes that <em>consecutive moof boxes are almost identical</em> and delta-encodes them.
+      With sample-level objects (every video frame, every audio frame is one MoQ object), that overhead becomes a meaningful share of the wire cost — about 25 % for low-bitrate audio, smaller for video where the media bitrate still dominates.
+      LOCMAF observes that <em>consecutive moof boxes are almost identical</em> and delta-encodes them — applied to clear audio
+      and <code>cbcs</code> audio the delta moof shrinks to <strong>two bytes</strong>, and the same approach extends to DRM-protected video.
+      It targets the same low-latency CMAF-chunk workload as <strong>LL-HLS Parts</strong> and <strong>DASH Chunked CMAF</strong> —
+      with the per-chunk moof overhead compressed away on the MoQ wire.
     </p>
     <figure class="figure">
       <img src="./assets/logomark-dark.svg" alt="A row of CMAF chunks compressed into delta blocks on the wire, then decompressed back to identical CMAF chunks." style="max-width:560px;"/>
@@ -135,6 +146,24 @@
     <figure class="figure">
       <img src="./assets/diagrams/delta-stream.svg" alt="Timeline of one MoQ group: a full moof followed by a brief IDR-transition delta and then a long run of 2-byte steady-state delta moofs."/>
     </figure>
+    <h3 style="margin-top:48px;">Per-track wire bitrate</h3>
+    <p>
+      The CMSF catalog reports the wire bitrate including framing.
+      The moof saving per object is essentially constant (~100 B → 2 B ≈ 99.6 B/object),
+      so the percentage saving grows as the track's bitrate shrinks — audio gains the most.
+    </p>
+    <table>
+      <thead><tr><th>track</th><th>sample</th><th>CMAF</th><th>LOCMAF</th><th>saved</th></tr></thead>
+      <tbody>
+        <tr><td><code>audio_128kbps_aac</code></td><td>128.0 kbps</td><td>171.5 kbps</td><td>131.9 kbps</td><td><strong>23.1 %</strong></td></tr>
+        <tr><td><code>video_400kbps_avc</code></td><td>373.2 kbps</td><td>396.4 kbps</td><td>376.5 kbps</td><td>5.0 %</td></tr>
+      </tbody>
+    </table>
+    <p>
+      The 128 kbps AAC track lands within ~3% of the raw sample bitrate —
+      the remaining LOCMAF overhead is ~2 B/object × ~47 obj/s ≈ 0.75 kbps plus the MoQ object framing.
+      Full per-track table (Opus, AC-3, HEVC, 600 / 900 kbps video) is in <code>docs/LOCMAF.md</code>.
+    </p>
   </div>
 </section>
 
@@ -186,10 +215,92 @@
       <code>base_media_decode_time</code> advances implicitly; per-sample fields are unchanged from the previous moof.
       Single sample size is calculated from total object size.
     </p>
+    <p>
+      The 2-byte steady state holds for clear content and for <code>cbcs</code> audio.
+      Sub-sample encryption on video adds the subsample map per fragment (~6 B steady state),
+      and <code>cenc</code> additionally carries the per-sample IV — see the
+      <a href="#drm">DRM section</a> below for the measured impact.
+    </p>
   </div>
 </section>
 
-<section class="band alt" id="prereq">
+<section class="band alt" id="drm">
+  <div class="container">
+    <header>
+      <span class="eyebrow">Designed for protected content</span>
+      <h2>DRM is end-to-end transparent</h2>
+    </header>
+    <p>
+      LOCMAF's primary use case is low-latency DRM-protected streaming over MoQ.
+      The encrypted <code>mdat</code> bytes, per-sample IVs, subsample byte ranges,
+      and the <code>tenc</code> defaults (including <code>default_KID</code>) are carried verbatim —
+      so the standard CDM / MSE / EME path on the receiver works as if the content had arrived as plain CMAF.
+      LOCMAF is invisible to the player.
+    </p>
+
+    <h3>Catalog DRM signalling</h3>
+    <p>
+      CMSF carries the DRM description at the catalog level; LOCMAF doesn't replace it.
+      A <code>contentProtections</code> array is referenced by per-track
+      <code>contentProtectionRefIDs</code>, mirroring DASH-IF IOP 6.
+    </p>
+<pre><code>{
+  "contentProtections": [{
+    "refID": "widevine",
+    "defaultKID": ["abcdef0123456789abcdef0123456789"],
+    "scheme": "cbcs",
+    "drmSystem": {
+      "systemID": "edef8ba9-79d6-4ace-a3c8-27dcd51d21ed",
+      "laURL": { "url": "https://lic.example.com/widevine", "type": "POST" },
+      "pssh": "base64-pssh-box"
+    }
+  }],
+  "tracks": [{
+    "name": "video_400kbps_avc_drm",
+    "packaging": "locmaf",
+    "locmafVersion": "0.1",
+    "contentProtectionRefIDs": ["widevine", "playready", "fairplay"],
+    "initData": "..."
+  }]
+}</code></pre>
+    <p>
+      The receiver picks the first <code>refID</code> whose <code>drmSystem.systemID</code> matches a CDM it can talk to,
+      then uses the named <code>pssh</code> / <code>laURL</code> to set up the MediaKeySession exactly as for a plain CMSF stream.
+    </p>
+
+    <h3><code>cenc</code> vs <code>cbcs</code> on the wire</h3>
+    <table>
+      <thead><tr><th>scheme</th><th>per-sample IV</th><th>subsample map</th><th>extra delta-moof cost</th></tr></thead>
+      <tbody>
+        <tr><td><code>cenc</code></td><td>per-sample, 8 or 16 B</td><td>~3 B/subsample (video)</td><td>~16 B IV + subsample bytes</td></tr>
+        <tr><td><code>cbcs</code></td><td>constant IV in <code>tenc</code></td><td>~3 B/subsample (video)</td><td>subsample bytes only</td></tr>
+      </tbody>
+    </table>
+    <p>
+      Audio uses full-sample encryption under both schemes, so audio under <code>cbcs</code> costs the same on the LOCMAF wire as clear audio —
+      the constant IV lives once in the moov and no per-fragment encryption signalling is needed.
+      Video carries the subsample map under both schemes.
+    </p>
+
+    <h3>Bitrate impact under DRM</h3>
+    <table>
+      <thead><tr><th>track</th><th>scheme</th><th>CMAF</th><th>LOCMAF</th><th>saved</th></tr></thead>
+      <tbody>
+        <tr><td><code>audio_128kbps_aac</code></td><td><code>cbcs</code></td><td>191.4 kbps</td><td>131.9 kbps</td><td><strong>31.1 %</strong></td></tr>
+        <tr><td><code>audio_128kbps_aac</code></td><td><code>cenc</code></td><td>197.4 kbps</td><td>138.6 kbps</td><td>29.8 %</td></tr>
+        <tr><td><code>video_400kbps_avc</code></td><td><code>cbcs</code></td><td>408.8 kbps</td><td>378.5 kbps</td><td>7.4 %</td></tr>
+        <tr><td><code>video_400kbps_avc</code></td><td><code>cenc</code></td><td>412.0 kbps</td><td>382.1 kbps</td><td>7.3 %</td></tr>
+      </tbody>
+    </table>
+    <p>
+      LOCMAF saves <em>more</em> relative to CMAF on DRM-protected content than on clear content —
+      the CMAF moof grows under encryption (extra <code>senc</code> / <code>saio</code> / <code>saiz</code>) while LOCMAF only emits what it actually needs.
+      Full per-track tables (Opus, AC-3, HEVC, 600 / 900 kbps) are in <code>docs/LOCMAF.md</code>.
+    </p>
+  </div>
+</section>
+
+<section class="band" id="prereq">
   <div class="container">
     <header>
       <span class="eyebrow">Source-side requirements</span>
@@ -207,6 +318,28 @@
     </table>
     <p>
       With a mismatched timescale each frame drifts ±1 tick, and the per-sample duration array has to be sent every fragment — the 2-byte steady-state delta moof is no longer achievable.
+    </p>
+  </div>
+</section>
+
+<section class="band alt" id="scope">
+  <div class="container">
+    <header>
+      <span class="eyebrow">Scope</span>
+      <h2>CMAF-shaped MP4 only</h2>
+    </header>
+    <p>
+      CMAF (ISO/IEC 23000-19) tightens ISOBMFF: each CMAF Track carries <strong>exactly one media track</strong>,
+      each CMAF Chunk is <strong>one <code>moof</code> followed by exactly one <code>mdat</code></strong>
+      (§7.3.3.2), and each <code>traf</code> contains <strong>exactly one <code>trun</code></strong> (Table 4).
+      These restrictions are what make LOCMAF's "one MoQ object = one moof + one mdat" mapping unambiguous —
+      a varint header_id, a properties block, and the rest of the object is mdat payload.
+    </p>
+    <p>
+      General fragmented MP4 may contain multiple <code>traf</code> / <code>trun</code> boxes per moof,
+      multiple <code>mdat</code> boxes per fragment, or multiple tracks multiplexed into one file.
+      LOCMAF does not address those layouts directly. Source content must be CMAF-conformant
+      (or trivially repackaged into CMAF) before LOCMAF encoding.
     </p>
   </div>
 </section>

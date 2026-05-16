@@ -90,6 +90,17 @@ pre {
 
 pre code { background: transparent; color: #e0e0e0; padding: 0; }
 
+/* highlight.js color overrides for the dark slide background.
+   The default hljs theme uses dark blue / dark red which are unreadable here. */
+pre code .hljs-attr        { color: var(--eyevinn-cyan); }
+pre code .hljs-string      { color: #FFD685; }
+pre code .hljs-number,
+pre code .hljs-literal     { color: #FFD685; }
+pre code .hljs-keyword,
+pre code .hljs-built_in    { color: var(--eyevinn-orange); }
+pre code .hljs-comment     { color: #8a8a8a; font-style: italic; }
+pre code .hljs-punctuation { color: #b0b0b0; }
+
 table {
   border-collapse: separate;
   border-spacing: 0;

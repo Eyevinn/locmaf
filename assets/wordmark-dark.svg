@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 120" role="img" aria-label="LOCMAF (dark-background variant).">
+  <defs>
+    <linearGradient id="cmafGradWD" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFC069"/>
+      <stop offset="100%" stop-color="#FC9900"/>
+    </linearGradient>
+    <linearGradient id="deltaGradWD" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#A8DCF2"/>
+      <stop offset="100%" stop-color="#61B5E5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- LEFT: big CMAF chunks. -->
+  <g transform="translate(8,28)">
+    <g transform="translate(0,0)">
+      <rect x="0" y="0"  width="32" height="14" rx="2" fill="url(#cmafGradWD)"/>
+      <rect x="0" y="16" width="32" height="68" rx="2" fill="url(#cmafGradWD)" opacity="0.78"/>
+    </g>
+    <g transform="translate(40,0)">
+      <rect x="0" y="0"  width="32" height="14" rx="2" fill="url(#cmafGradWD)"/>
+      <rect x="0" y="16" width="32" height="68" rx="2" fill="url(#cmafGradWD)" opacity="0.78"/>
+    </g>
+    <g transform="translate(80,0)">
+      <rect x="0" y="0"  width="32" height="14" rx="2" fill="url(#cmafGradWD)"/>
+      <rect x="0" y="16" width="32" height="68" rx="2" fill="url(#cmafGradWD)" opacity="0.78"/>
+    </g>
+  </g>
+
+  <!-- Compress wedge. -->
+  <g transform="translate(132,40)" fill="none" stroke="#cfcfcf" stroke-width="1.75" stroke-linejoin="round">
+    <path d="M0 0 L42 24 L42 40 L0 64 Z"/>
+  </g>
+
+  <!-- Tiny deltas. -->
+  <g transform="translate(186,60)">
+    <rect x="0"  y="0" width="14" height="22" rx="2" fill="url(#deltaGradWD)"/>
+    <rect x="20" y="0" width="14" height="22" rx="2" fill="url(#deltaGradWD)"/>
+    <rect x="40" y="0" width="14" height="22" rx="2" fill="url(#deltaGradWD)"/>
+  </g>
+
+  <!-- Decompress wedge. -->
+  <g transform="translate(254,40)" fill="none" stroke="#cfcfcf" stroke-width="1.75" stroke-linejoin="round">
+    <path d="M0 24 L42 0 L42 64 L0 40 Z"/>
+  </g>
+
+  <!-- RIGHT: reconstructed big chunks. -->
+  <g transform="translate(304,28)">
+    <g transform="translate(0,0)">
+      <rect x="0" y="0"  width="32" height="14" rx="2" fill="url(#cmafGradWD)"/>
+      <rect x="0" y="16" width="32" height="68" rx="2" fill="url(#cmafGradWD)" opacity="0.78"/>
+    </g>
+    <g transform="translate(40,0)">
+      <rect x="0" y="0"  width="32" height="14" rx="2" fill="url(#cmafGradWD)"/>
+      <rect x="0" y="16" width="32" height="68" rx="2" fill="url(#cmafGradWD)" opacity="0.78"/>
+    </g>
+    <g transform="translate(80,0)">
+      <rect x="0" y="0"  width="32" height="14" rx="2" fill="url(#cmafGradWD)"/>
+      <rect x="0" y="16" width="32" height="68" rx="2" fill="url(#cmafGradWD)" opacity="0.78"/>
+    </g>
+  </g>
+
+  <!-- Wordmark — same font + weight as the hero logo, vertically centered with the icon (icon center y=70). -->
+  <g transform="translate(448,0)">
+    <text x="0" y="92" font-family="'LevelOne','Helvetica Neue',Arial,sans-serif"
+          font-size="62" font-weight="700" letter-spacing="2" fill="#FFFFFF">LOCMAF</text>
+  </g>
+</svg>

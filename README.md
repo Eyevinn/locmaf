@@ -8,10 +8,17 @@
 
 # locmaf.dev
 
-Information site and MARP deck for [LOCMAF](https://github.com/Eyevinn/moqlivemock/blob/main/docs/LOCMAF.md) — *Low Overhead CMAF for MOQ.*
+Information site and MARP deck for [LOCMAF](https://datatracker.ietf.org/doc/draft-einarsson-moq-locmaf/) — *Low Overhead CMAF for MOQ.*
 
 The primary surface is a single-page static site (`site/index.html`).
 A MARP-rendered slide deck (`slides/locmaf.md`) is published as a secondary artifact at `/slides/`.
+
+## Specification
+
+LOCMAF is specified in the IETF Internet-Draft
+[draft-einarsson-moq-locmaf](https://datatracker.ietf.org/doc/draft-einarsson-moq-locmaf/).
+The editor's copy is at <https://eyevinn.github.io/locmaf-id/> and the
+source repository is [Eyevinn/locmaf-id](https://github.com/Eyevinn/locmaf-id).
 
 ## Layout
 

@@ -180,15 +180,24 @@
     <table>
       <thead><tr><th>ID</th><th>Symbol</th><th>Object kind</th></tr></thead>
       <tbody>
-        <tr><td>21</td><td>MoovHeader</td><td>LOCMAF moov (init data in the catalog)</td></tr>
-        <tr><td>23</td><td>MoofHeader</td><td>full moof + mdat</td></tr>
-        <tr><td>25</td><td>MoofDeltaHeader</td><td>delta moof + mdat</td></tr>
+        <tr><td>23</td><td>LocmafFullHeader</td><td>full chunk (styp / prft / emsg / moof + mdat)</td></tr>
+        <tr><td>25</td><td>LocmafDeltaHeader</td><td>delta chunk (prft / emsg / moof + mdat)</td></tr>
       </tbody>
     </table>
     <p>
-      IDs start at 21 so they don't collide with LOC's properties (1–16).
-      Unknown <code>header_id</code> values are logged and skipped using <code>properties_length</code> —
-      the format extends without breaking older decoders. Likely next additions: <code>prft</code> (wall-clock signalling), <code>sidx</code>, and a raw / gzip fallback for chunks that don't fit the delta vocabulary.
+      <strong>From v0.2 the <code>moov</code> box is no longer compressed.</strong>
+      The CMAF Header is delivered as raw, uncompressed bytes via the
+      MSF / CMSF catalog (the same <code>initData</code> bytes a plain
+      <code>cmaf</code> packaging track uses), so v0.2 no longer needs the
+      v0.1 <code>MoovHeader = 21</code> object kind. Init compression is a
+      one-time-per-track cost; LOCMAF concentrates on the per-chunk overhead.
+    </p>
+    <p>
+      Values 23 and 25 sit in the public MOQT object-kind ID space and
+      need an IANA registration — requested by the IETF LOCMAF draft.
+      Unknown <code>header_id</code> values are logged and skipped using
+      <code>properties_length</code>, so the format extends without breaking
+      older decoders.
     </p>
     <h3>Steady-state delta moof in two bytes</h3>
     <figure class="delta-moof">

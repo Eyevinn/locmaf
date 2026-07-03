@@ -8,12 +8,14 @@ const Version = "0.3"
 
 // Element types. Each element of a LOCMAF Object payload begins with an
 // element_type vi64; the mdat payload that follows the header element is
-// untagged. An unknown element type is not self-delimiting and rejects
-// the whole Object.
+// untagged. A rawBoxes element is the sole element of its Object. An
+// unknown element type is not self-delimiting and rejects the whole
+// Object.
 const (
 	ElementTypeGenBox      uint64 = 1
 	ElementTypeFullHeader  uint64 = 2
 	ElementTypeDeltaHeader uint64 = 3
+	ElementTypeRawBoxes    uint64 = 4
 )
 
 // Sentinel errors. Wire-level violations that a receiver MUST reject

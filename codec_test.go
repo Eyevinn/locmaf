@@ -88,7 +88,7 @@ func TestGoldenFullObject(t *testing.T) {
 
 	// Decode and pin the canonical reconstruction bytes.
 	rx := NewState()
-	eff, err := Decode(obj, rx, moov)
+	eff, _, err := Decode(obj, rx, moov)
 	require.NoError(t, err)
 	require.Equal(t, 2, eff.SampleCount)
 	require.Equal(t, uint64(90000), eff.BMDT)
@@ -148,7 +148,7 @@ func TestDeltaSequenceBMDTDerivation(t *testing.T) {
 		}
 		require.Equal(t, wantType, headerElementType(t, obj), "chunk %d header type", i)
 
-		eff, err := Decode(obj, rx, moov)
+		eff, _, err := Decode(obj, rx, moov)
 		require.NoError(t, err)
 		require.Equal(t, bmdt, eff.BMDT, "chunk %d BMDT", i)
 		require.Equal(t, 3, eff.SampleCount, "chunk %d sample count", i)
@@ -169,14 +169,14 @@ func TestMidGroupReanchor(t *testing.T) {
 	obj1, err := EncodeCanonical(nil, makeFragment(t, 1, 0, samples), samplePayload(samples), tx, moov)
 	require.NoError(t, err)
 	require.Equal(t, ElementTypeFullHeader, headerElementType(t, obj1))
-	_, err = Decode(obj1, rx, moov)
+	_, _, err = Decode(obj1, rx, moov)
 	require.NoError(t, err)
 
 	// Contiguous -> delta.
 	obj2, err := EncodeCanonical(nil, makeFragment(t, 2, 6000, samples), samplePayload(samples), tx, moov)
 	require.NoError(t, err)
 	require.Equal(t, ElementTypeDeltaHeader, headerElementType(t, obj2))
-	eff2, err := Decode(obj2, rx, moov)
+	eff2, _, err := Decode(obj2, rx, moov)
 	require.NoError(t, err)
 	require.Equal(t, uint64(6000), eff2.BMDT)
 
@@ -184,7 +184,7 @@ func TestMidGroupReanchor(t *testing.T) {
 	obj3, err := EncodeCanonical(nil, makeFragment(t, 3, 500000, samples), samplePayload(samples), tx, moov)
 	require.NoError(t, err)
 	require.Equal(t, ElementTypeFullHeader, headerElementType(t, obj3))
-	eff3, err := Decode(obj3, rx, moov)
+	eff3, _, err := Decode(obj3, rx, moov)
 	require.NoError(t, err)
 	require.Equal(t, uint64(500000), eff3.BMDT)
 
@@ -192,7 +192,7 @@ func TestMidGroupReanchor(t *testing.T) {
 	obj4, err := EncodeCanonical(nil, makeFragment(t, 4, 506000, samples), samplePayload(samples), tx, moov)
 	require.NoError(t, err)
 	require.Equal(t, ElementTypeDeltaHeader, headerElementType(t, obj4))
-	eff4, err := Decode(obj4, rx, moov)
+	eff4, _, err := Decode(obj4, rx, moov)
 	require.NoError(t, err)
 	require.Equal(t, uint64(506000), eff4.BMDT)
 }
@@ -218,7 +218,7 @@ func TestListLengthChangesGrowAndShrink(t *testing.T) {
 		obj, err := EncodeCanonical(nil, moof, samplePayload(samples), tx, moov)
 		require.NoError(t, err)
 
-		eff, err := Decode(obj, rx, moov)
+		eff, _, err := Decode(obj, rx, moov)
 		require.NoError(t, err)
 		require.Equal(t, n, eff.SampleCount, "chunk %d", i)
 		for j := range samples {
@@ -244,7 +244,7 @@ func TestFirstSampleFlagsDeletion(t *testing.T) {
 	require.NoError(t, err)
 
 	// The full header carries ID 12 (first-differs case).
-	_, hdrType, props, _, err := splitElements(obj1)
+	_, hdrType, props, _, _, err := splitElements(obj1)
 	require.NoError(t, err)
 	require.Equal(t, ElementTypeFullHeader, hdrType)
 	raw, err := rawProperties(props)
@@ -253,7 +253,7 @@ func TestFirstSampleFlagsDeletion(t *testing.T) {
 
 	obj2, err := EncodeCanonical(nil, makeFragment(t, 2, 9000, samples2), samplePayload(samples2), tx, moov)
 	require.NoError(t, err)
-	_, hdrType, props, _, err = splitElements(obj2)
+	_, hdrType, props, _, _, err = splitElements(obj2)
 	require.NoError(t, err)
 	require.Equal(t, ElementTypeDeltaHeader, hdrType)
 	raw, err = rawProperties(props)
@@ -264,9 +264,9 @@ func TestFirstSampleFlagsDeletion(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, deleted, uint64(idTrunFirstSampleFlags))
 
-	_, err = Decode(obj1, rx, moov)
+	_, _, err = Decode(obj1, rx, moov)
 	require.NoError(t, err)
-	eff2, err := Decode(obj2, rx, moov)
+	eff2, _, err := Decode(obj2, rx, moov)
 	require.NoError(t, err)
 	require.Equal(t, []uint32{p, p, p}, eff2.Flags, "first sample falls back to the default flags")
 }
@@ -277,7 +277,7 @@ func TestUnknownElementTypeRejects(t *testing.T) {
 	moov := buildSyntheticMoov(t, 0)
 	obj := vi64.Append(nil, 99)
 	obj = vi64.Append(obj, 0)
-	_, err := Decode(obj, NewState(), moov)
+	_, _, err := Decode(obj, NewState(), moov)
 	require.ErrorIs(t, err, ErrMalformed)
 }
 
@@ -285,7 +285,7 @@ func TestDeltaWithoutFullRejects(t *testing.T) {
 	moov := buildSyntheticMoov(t, 0)
 	obj := vi64.Append(nil, ElementTypeDeltaHeader)
 	obj = vi64.Append(obj, 0)
-	_, err := Decode(obj, NewState(), moov)
+	_, _, err := Decode(obj, NewState(), moov)
 	require.ErrorIs(t, err, ErrMalformed)
 }
 
@@ -296,7 +296,7 @@ func TestField10InDeltaRejects(t *testing.T) {
 	tx, rx := NewState(), NewState()
 	obj1, err := EncodeCanonical(nil, makeFragment(t, 1, 0, samples), samplePayload(samples), tx, moov)
 	require.NoError(t, err)
-	_, err = Decode(obj1, rx, moov)
+	_, _, err = Decode(obj1, rx, moov)
 	require.NoError(t, err)
 
 	var props []byte
@@ -306,7 +306,7 @@ func TestField10InDeltaRejects(t *testing.T) {
 	obj = vi64.Append(obj, uint64(len(props)))
 	obj = append(obj, props...)
 	obj = append(obj, samplePayload(samples)...)
-	_, err = Decode(obj, rx, moov)
+	_, _, err = Decode(obj, rx, moov)
 	require.ErrorIs(t, err, ErrMalformed)
 }
 
@@ -324,7 +324,7 @@ func TestField27InFullRejects(t *testing.T) {
 	obj := vi64.Append(nil, ElementTypeFullHeader)
 	obj = vi64.Append(obj, uint64(len(props)))
 	obj = append(obj, props...)
-	_, err := Decode(obj, NewState(), moov)
+	_, _, err := Decode(obj, NewState(), moov)
 	require.ErrorIs(t, err, ErrMalformed)
 }
 
@@ -339,7 +339,7 @@ func TestDuplicateFieldRejects(t *testing.T) {
 	obj := vi64.Append(nil, ElementTypeFullHeader)
 	obj = vi64.Append(obj, uint64(len(props)))
 	obj = append(obj, props...)
-	_, err := Decode(obj, NewState(), moov)
+	_, _, err := Decode(obj, NewState(), moov)
 	require.ErrorIs(t, err, ErrMalformed)
 }
 
@@ -362,7 +362,7 @@ func TestUnknownFieldIDSkipped(t *testing.T) {
 	obj = append(obj, props...)
 	obj = append(obj, bytes.Repeat([]byte{0x42}, 500)...)
 
-	eff, err := Decode(obj, NewState(), moov)
+	eff, _, err := Decode(obj, NewState(), moov)
 	require.NoError(t, err)
 	require.Equal(t, 1, eff.SampleCount)
 	require.Equal(t, uint64(90000), eff.BMDT)
@@ -382,7 +382,7 @@ func TestGenBoxRoundTrip(t *testing.T) {
 		samplePayload(samples), tx, moov)
 	require.NoError(t, err)
 
-	eff, err := Decode(obj, rx, moov)
+	eff, _, err := Decode(obj, rx, moov)
 	require.NoError(t, err)
 	require.Len(t, eff.GenBoxes, 2)
 	require.Equal(t, prft, eff.GenBoxes[0])
@@ -444,7 +444,7 @@ func TestCENCSubsampleRoundTrip(t *testing.T) {
 	obj = append(obj, props...)
 	obj = append(obj, bytes.Repeat([]byte{0xEE}, 1600)...)
 
-	eff, err := Decode(obj, NewState(), moov)
+	eff, _, err := Decode(obj, NewState(), moov)
 	require.NoError(t, err)
 	require.Equal(t, uint8(8), eff.PerSampleIVSize)
 	require.Equal(t, ivs, eff.IVs)
@@ -491,7 +491,7 @@ func TestCbcsOmitRule(t *testing.T) {
 	tx, rx := NewState(), NewState()
 	obj, err := EncodeCanonical(nil, makeFragment(t, 1, 0, samples), samplePayload(samples), tx, moov)
 	require.NoError(t, err)
-	eff, err := Decode(obj, rx, moov)
+	eff, _, err := Decode(obj, rx, moov)
 	require.NoError(t, err)
 	require.Equal(t, uint8(0), eff.PerSampleIVSize)
 	require.False(t, eff.HasSubsamples)
@@ -515,7 +515,7 @@ func TestEventOnly(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, ElementTypeGenBox, headerElementType(t, obj))
 
-	eff, err := Decode(obj, rx, moov)
+	eff, _, err := Decode(obj, rx, moov)
 	require.NoError(t, err)
 	require.Equal(t, 0, eff.SampleCount)
 	require.Equal(t, uint64(123456), eff.BMDT)
@@ -541,7 +541,7 @@ func TestZeroSamplesWithPayloadRejects(t *testing.T) {
 	obj = vi64.Append(obj, uint64(len(props)))
 	obj = append(obj, props...)
 	obj = append(obj, 0x01)
-	_, err := Decode(obj, NewState(), moov)
+	_, _, err := Decode(obj, NewState(), moov)
 	require.ErrorIs(t, err, ErrMalformed)
 }
 
@@ -560,7 +560,7 @@ func TestNegativeCTOs(t *testing.T) {
 	tx, rx := NewState(), NewState()
 	obj, err := EncodeCanonical(nil, makeFragment(t, 1, 0, samples), samplePayload(samples), tx, moov)
 	require.NoError(t, err)
-	eff, err := Decode(obj, rx, moov)
+	eff, _, err := Decode(obj, rx, moov)
 	require.NoError(t, err)
 	require.Equal(t, []int32{0, 6000, -3000}, eff.CTOs)
 
@@ -582,7 +582,7 @@ func TestReconstructionParsesWithMp4ff(t *testing.T) {
 	tx, rx := NewState(), NewState()
 	obj, err := EncodeCanonical(nil, makeFragment(t, 1, 90000, samples), samplePayload(samples), tx, moov)
 	require.NoError(t, err)
-	eff, err := Decode(obj, rx, moov)
+	eff, _, err := Decode(obj, rx, moov)
 	require.NoError(t, err)
 	chunk, err := ReconstructCanonical(moov, eff)
 	require.NoError(t, err)

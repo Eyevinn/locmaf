@@ -72,6 +72,31 @@ func EncodeCanonical(genBoxes []GenBox, moof *mp4.MoofBox, mdatPayload []byte,
 	return out, nil
 }
 
+// EncodeRaw encodes complete ISO BMFF boxes, carried verbatim, as a
+// rawBoxes LOCMAF Object — the escape from the moof-header model for
+// content LOCMAF does not otherwise carry: an in-band CMAF Header
+// (ftyp + moov) in self-framed carriage, or a chunk whose moof falls
+// outside the LOCMAF field model. boxes must be one or more complete
+// boxes, each carrying its actual size in the 32-bit size field (the
+// ISO size escapes 0 and 1 are not allowed). The element carries no
+// length of its own — the Object length delimits it. A rawBoxes Object
+// resets the in-group delta chain, so prev is Reset and the next
+// EncodeCanonical chunk in the group emits a full header; prev must not
+// be nil.
+func EncodeRaw(boxes []byte, prev *State) ([]byte, error) {
+	if prev == nil {
+		return nil, fmt.Errorf("prev state must not be nil: %w", ErrBadSource)
+	}
+	if err := validateRawBoxes(boxes, ErrBadSource); err != nil {
+		return nil, err
+	}
+	out := make([]byte, 0, len(boxes)+1)
+	out = vi64.Append(out, ElementTypeRawBoxes)
+	out = append(out, boxes...)
+	prev.Reset()
+	return out, nil
+}
+
 // propertyEntry is one (field_id, payload) tuple ready for framing.
 type propertyEntry struct {
 	id      fieldID

@@ -1,6 +1,7 @@
 package locmaf
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/Eyevinn/locmaf/vi64"
@@ -11,22 +12,31 @@ import (
 // allocation attacks; no real CMAF chunk approaches it.
 const maxSampleCount = 1 << 24
 
-// Decode decodes one LOCMAF Object payload into its effective values,
-// using prev as the in-group reference for delta chunks. prev is
-// mutated to reflect the decoded chunk (a full header resets it first);
-// it must not be nil. Callers use one State per MOQT group, in object
-// order, and Reset it (or use a fresh one) at every group boundary.
-func Decode(payload []byte, prev *State, moov *mp4.MoovBox) (*EffectiveValues, error) {
+// Decode decodes one LOCMAF Object payload, using prev as the in-group
+// reference for delta chunks. For a moof-carrying Object it returns the
+// chunk's effective values and a nil raw slice; for a rawBoxes Object it
+// returns nil effective values and the carried boxes verbatim (a
+// subslice of payload), which are also their own canonical form. prev is
+// mutated to reflect the decoded Object (a full header resets it first;
+// a rawBoxes Object resets it, so the next moof-carrying Object must be
+// full); it must not be nil. Callers use one State per MOQT group, in
+// object order, and Reset it (or use a fresh one) at every group
+// boundary.
+func Decode(payload []byte, prev *State, moov *mp4.MoovBox) (*EffectiveValues, []byte, error) {
 	if prev == nil {
-		return nil, fmt.Errorf("prev state must not be nil: %w", ErrMalformed)
+		return nil, nil, fmt.Errorf("prev state must not be nil: %w", ErrMalformed)
 	}
 	if moov == nil || moov.Mvex == nil || moov.Mvex.Trex == nil {
-		return nil, fmt.Errorf("moov or trex not defined: %w", ErrMalformed)
+		return nil, nil, fmt.Errorf("moov or trex not defined: %w", ErrMalformed)
 	}
 
-	genBoxes, headerType, props, mdat, err := splitElements(payload)
+	genBoxes, headerType, props, mdat, raw, err := splitElements(payload)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+	if raw != nil {
+		prev.Reset()
+		return nil, raw, nil
 	}
 
 	var cf *chunkFields
@@ -34,38 +44,39 @@ func Decode(payload []byte, prev *State, moov *mp4.MoovBox) (*EffectiveValues, e
 	case ElementTypeFullHeader:
 		cf, err = applyFullProperties(props)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		prev.Reset()
 	case ElementTypeDeltaHeader:
 		if !prev.hasAny {
-			return nil, fmt.Errorf("delta header before any full header in the group: %w", ErrMalformed)
+			return nil, nil, fmt.Errorf("delta header before any full header in the group: %w", ErrMalformed)
 		}
 		cf, err = applyDeltaProperties(props, prev, moov.Mvex.Trex.DefaultSampleDuration)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
 	eff, err := expandEffective(cf, genBoxes, mdat, moov)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	prev.store(cf)
-	return eff, nil
+	return eff, nil, nil
 }
 
-// splitElements walks the element sequence: genBoxes, exactly one full
-// or delta header, then the untagged mdat payload.
-func splitElements(payload []byte) (genBoxes []GenBox, headerType uint64, props, mdat []byte, err error) {
+// splitElements walks the element sequence: either genBoxes, exactly
+// one full or delta header, and the untagged mdat payload, or a single
+// rawBoxes element spanning the whole Object (returned via raw).
+func splitElements(payload []byte) (genBoxes []GenBox, headerType uint64, props, mdat, raw []byte, err error) {
 	pos := 0
 	for {
 		if pos >= len(payload) {
-			return nil, 0, nil, nil, fmt.Errorf("object ends before a header element: %w", ErrMalformed)
+			return nil, 0, nil, nil, nil, fmt.Errorf("object ends before a header element: %w", ErrMalformed)
 		}
 		elementType, n, err := vi64.Parse(payload[pos:])
 		if err != nil {
-			return nil, 0, nil, nil, fmt.Errorf("invalid element_type: %w", ErrMalformed)
+			return nil, 0, nil, nil, nil, fmt.Errorf("invalid element_type: %w", ErrMalformed)
 		}
 		pos += n
 
@@ -73,14 +84,14 @@ func splitElements(payload []byte) (genBoxes []GenBox, headerType uint64, props,
 		case ElementTypeGenBox:
 			boxSize, n, err := vi64.Parse(payload[pos:])
 			if err != nil {
-				return nil, 0, nil, nil, fmt.Errorf("invalid genBox box_size: %w", ErrMalformed)
+				return nil, 0, nil, nil, nil, fmt.Errorf("invalid genBox box_size: %w", ErrMalformed)
 			}
 			pos += n
 			if boxSize < 4 || boxSize > 0xFFFFFFFB {
-				return nil, 0, nil, nil, fmt.Errorf("genBox box_size %d out of range: %w", boxSize, ErrMalformed)
+				return nil, 0, nil, nil, nil, fmt.Errorf("genBox box_size %d out of range: %w", boxSize, ErrMalformed)
 			}
 			if boxSize > uint64(len(payload)-pos) {
-				return nil, 0, nil, nil, fmt.Errorf("genBox exceeds object payload: %w", ErrMalformed)
+				return nil, 0, nil, nil, nil, fmt.Errorf("genBox exceeds object payload: %w", ErrMalformed)
 			}
 			genBoxes = append(genBoxes, GenBox{
 				Name:    string(payload[pos : pos+4]),
@@ -91,21 +102,61 @@ func splitElements(payload []byte) (genBoxes []GenBox, headerType uint64, props,
 		case ElementTypeFullHeader, ElementTypeDeltaHeader:
 			propsLen, n, err := vi64.Parse(payload[pos:])
 			if err != nil {
-				return nil, 0, nil, nil, fmt.Errorf("invalid properties_length: %w", ErrMalformed)
+				return nil, 0, nil, nil, nil, fmt.Errorf("invalid properties_length: %w", ErrMalformed)
 			}
 			pos += n
 			if propsLen > uint64(len(payload)-pos) {
-				return nil, 0, nil, nil, fmt.Errorf("property block exceeds object payload: %w", ErrMalformed)
+				return nil, 0, nil, nil, nil, fmt.Errorf("property block exceeds object payload: %w", ErrMalformed)
 			}
 			props = payload[pos : pos+int(propsLen)]
 			mdat = payload[pos+int(propsLen):]
-			return genBoxes, elementType, props, mdat, nil
+			return genBoxes, elementType, props, mdat, nil, nil
+
+		case ElementTypeRawBoxes:
+			if len(genBoxes) > 0 {
+				return nil, 0, nil, nil, nil, fmt.Errorf("rawBoxes element after a genBox: %w", ErrMalformed)
+			}
+			// A rawBoxes element carries no length of its own: as the
+			// sole element of its Object, the Object length delimits it,
+			// like the untagged mdat payload of a moof-carrying Object.
+			raw = payload[pos:]
+			if err := validateRawBoxes(raw, ErrMalformed); err != nil {
+				return nil, 0, nil, nil, nil, err
+			}
+			return nil, 0, nil, nil, raw, nil
 
 		default:
 			// Not self-delimiting: the Object cannot be skipped past.
-			return nil, 0, nil, nil, fmt.Errorf("unknown element_type %d: %w", elementType, ErrMalformed)
+			return nil, 0, nil, nil, nil, fmt.Errorf("unknown element_type %d: %w", elementType, ErrMalformed)
 		}
 	}
+}
+
+// validateRawBoxes checks that data is the concatenation of one or more
+// complete ISO BMFF boxes: each box's declared size at least 8, neither
+// ISO size escape (0 or 1) used, and the sizes summing to exactly
+// len(data). sentinel is the error class to wrap: ErrMalformed on the
+// decode side, ErrBadSource on the encode side.
+func validateRawBoxes(data []byte, sentinel error) error {
+	if len(data) == 0 {
+		return fmt.Errorf("empty rawBoxes content: %w", sentinel)
+	}
+	pos := 0
+	for pos < len(data) {
+		if len(data)-pos < 8 {
+			return fmt.Errorf("truncated box header at offset %d in rawBoxes: %w", pos, sentinel)
+		}
+		size := binary.BigEndian.Uint32(data[pos:])
+		if size < 8 {
+			return fmt.Errorf("box size %d at offset %d in rawBoxes (ISO size escapes and sub-header sizes not allowed): %w",
+				size, pos, sentinel)
+		}
+		if uint64(size) > uint64(len(data)-pos) {
+			return fmt.Errorf("box at offset %d exceeds rawBoxes content: %w", pos, sentinel)
+		}
+		pos += int(size)
+	}
+	return nil
 }
 
 // rawProperties splits a property block into raw bytes per field ID via

@@ -26,6 +26,17 @@ func EncodeCanonical(genBoxes []GenBox, moof *mp4.MoofBox, mdatPayload []byte,
 	if err != nil {
 		return nil, err
 	}
+	// The receiver derives sizes from the mdat-payload length (the last
+	// listed size, the n×size check, the n == 1 rule), so a source whose
+	// sample sizes do not cover the payload exactly cannot round-trip.
+	var sizeSum uint64
+	for _, s := range sv.sizes {
+		sizeSum += uint64(s)
+	}
+	if sizeSum != uint64(len(mdatPayload)) {
+		return nil, fmt.Errorf("source sample sizes sum to %d but the mdat payload is %d bytes: %w",
+			sizeSum, len(mdatPayload), ErrBadSource)
+	}
 	cf, err := emitFields(sv, moov)
 	if err != nil {
 		return nil, err

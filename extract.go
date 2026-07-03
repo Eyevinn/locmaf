@@ -39,12 +39,48 @@ func extractSourceValues(moof *mp4.MoofBox, moov *mp4.MoovBox) (*sourceValues, e
 	if moov == nil || moov.Mvex == nil || moov.Mvex.Trex == nil {
 		return nil, fmt.Errorf("moov or trex not defined: %w", ErrBadSource)
 	}
+	// Sources outside the LOCMAF field model must use plain CMAF
+	// packaging: a multi-trak moov, a moof with several trafs or truns,
+	// per-fragment pssh, sample groups (sgpd/sbgp key rotation), or any
+	// other traf child the model does not carry would be silently
+	// dropped rather than round-tripped.
+	if len(moov.Traks) != 1 {
+		return nil, fmt.Errorf("moov has %d traks, LOCMAF requires exactly one: %w", len(moov.Traks), ErrBadSource)
+	}
+	if len(moof.Trafs) != 1 {
+		return nil, fmt.Errorf("moof has %d trafs, LOCMAF requires exactly one: %w", len(moof.Trafs), ErrBadSource)
+	}
+	if len(moof.Psshs) > 0 {
+		return nil, fmt.Errorf("per-fragment pssh is not supported: %w", ErrBadSource)
+	}
+	for _, child := range moof.Children {
+		switch child.Type() {
+		case "mfhd", "traf":
+		default:
+			return nil, fmt.Errorf("moof child %q is outside the LOCMAF model: %w", child.Type(), ErrBadSource)
+		}
+	}
 	traf := moof.Traf
+	if len(traf.Truns) != 1 {
+		return nil, fmt.Errorf("traf has %d truns, LOCMAF requires exactly one: %w", len(traf.Truns), ErrBadSource)
+	}
+	for _, child := range traf.Children {
+		switch child.Type() {
+		case "tfhd", "tfdt", "trun", "senc", "saiz", "saio", "uuid": //nolint:goconst // box FourCCs
+			// uuid covers the PIFF senc carrier, parsed via UUIDSenc.
+		default:
+			return nil, fmt.Errorf("traf child %q is outside the LOCMAF model: %w", child.Type(), ErrBadSource)
+		}
+	}
 	trun, tfhd, tfdt := traf.Trun, traf.Tfhd, traf.Tfdt
 	if trun == nil || tfhd == nil || tfdt == nil {
 		return nil, fmt.Errorf("traf lacks trun, tfhd, or tfdt: %w", ErrBadSource)
 	}
 	trex := moov.Mvex.Trex
+	if tfhd.TrackID != trex.TrackID {
+		return nil, fmt.Errorf("tfhd track_ID %d does not match trex track_ID %d: %w",
+			tfhd.TrackID, trex.TrackID, ErrBadSource)
+	}
 
 	sv := &sourceValues{
 		n:    len(trun.Samples),

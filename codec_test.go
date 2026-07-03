@@ -24,6 +24,19 @@ func buildSyntheticMoov(t *testing.T, defaultFlags uint32) *mp4.MoovBox {
 	return init.Moov
 }
 
+// addTenc marks the moov's single track as protected, with the given
+// tenc per-sample IV size default.
+func addTenc(t *testing.T, moov *mp4.MoovBox, ivSize uint8) {
+	t.Helper()
+	vse := mp4.NewVisualSampleEntryBox("encv")
+	sinf := &mp4.SinfBox{}
+	schi := &mp4.SchiBox{}
+	schi.AddChild(&mp4.TencBox{DefaultIsProtected: 1, DefaultPerSampleIVSize: ivSize})
+	sinf.AddChild(schi)
+	vse.AddChild(sinf)
+	moov.Trak.Mdia.Minf.Stbl.Stsd.AddChild(vse)
+}
+
 // makeFragment builds a moof with the given samples and BMDT.
 func makeFragment(t *testing.T, seqnum uint32, bmdt uint64, samples []mp4.FullSample) *mp4.MoofBox {
 	t.Helper()
@@ -407,6 +420,7 @@ func TestGenBoxRoundTrip(t *testing.T) {
 // and pins the canonical saiz/saio/senc layout.
 func TestCENCSubsampleRoundTrip(t *testing.T) {
 	moov := buildSyntheticMoov(t, 0x01010000)
+	addTenc(t, moov, 8)
 	// Hand-build a full header: n=2, uniform size 800 via field 6,
 	// IV size 8 via field 16, one subsample per sample.
 	ivs := bytes.Repeat([]byte{0x0F}, 16)
@@ -432,7 +446,7 @@ func TestCENCSubsampleRoundTrip(t *testing.T) {
 	props = vi64.Append(props, 2)
 	var protPayload []byte
 	protPayload = vi64.Append(protPayload, 793)
-	protPayload = vi64.Append(protPayload, 693)
+	protPayload = vi64.Append(protPayload, 793)
 	props = vi64.Append(props, uint64(idSencBytesOfProtectedData)) // 15
 	props = vi64.Append(props, uint64(len(protPayload)))
 	props = append(props, protPayload...)
@@ -451,14 +465,14 @@ func TestCENCSubsampleRoundTrip(t *testing.T) {
 	require.True(t, eff.HasSubsamples)
 	require.Equal(t, []uint16{1, 1}, eff.SubsampleCounts)
 	require.Equal(t, []uint16{7, 7}, eff.ClearBytes)
-	require.Equal(t, []uint32{793, 693}, eff.ProtectedBytes)
+	require.Equal(t, []uint32{793, 793}, eff.ProtectedBytes)
 
 	chunk, err := ReconstructCanonical(moov, eff)
 	require.NoError(t, err)
 
 	// Box order inside traf: tfhd, tfdt, trun, saiz, saio, senc.
 	s := string(chunk)
-	order := []string{"tfhd", "tfdt", "trun", "saiz", "saio", "senc"}
+	order := []string{"tfhd", "tfdt", "trun", "saiz", "saio", "senc"} //nolint:goconst // box FourCCs
 	last := -1
 	for _, name := range order {
 		idx := strings.Index(s, name)
@@ -608,4 +622,214 @@ func TestReconstructionParsesWithMp4ff(t *testing.T) {
 	require.False(t, moofOut.Traf.Trun.HasSampleFlags())
 	require.Equal(t, int32(len(chunk)-len(eff.MdatPayload)), moofOut.Traf.Trun.DataOffset,
 		"data_offset points just past the mdat header")
+}
+
+// TestSingleSampleCanonicalSize: the wire omits a single sample's size,
+// but the canonical CMAF chunk must still carry it as a tfhd default
+// when it differs from trex — ISO BMFF has no derive-from-mdat rule.
+func TestSingleSampleCanonicalSize(t *testing.T) {
+	moov := buildSyntheticMoov(t, 0x01010000) // trex default size 1000
+	samples := []mp4.FullSample{mkSample(3000, 800, 0x01010000, 0xAA)}
+	tx, rx := NewState(), NewState()
+	obj, err := EncodeCanonical(nil, makeFragment(t, 1, 90000, samples), samplePayload(samples), tx, moov)
+	require.NoError(t, err)
+	eff, _, err := Decode(obj, rx, moov)
+	require.NoError(t, err)
+	require.Equal(t, []uint32{800}, eff.Sizes)
+
+	chunk, err := ReconstructCanonical(moov, eff)
+	require.NoError(t, err)
+	sr := bytes.NewReader(chunk)
+	box, err := mp4.DecodeBox(0, sr)
+	require.NoError(t, err)
+	moofOut := box.(*mp4.MoofBox)
+	require.True(t, moofOut.Traf.Tfhd.HasDefaultSampleSize(),
+		"single-sample size must ride as a tfhd default")
+	require.Equal(t, uint32(800), moofOut.Traf.Tfhd.DefaultSampleSize)
+	require.False(t, moofOut.Traf.Trun.HasSampleSize())
+
+	// When the size equals the trex default it is omitted and trex
+	// carries it.
+	samples2 := []mp4.FullSample{mkSample(3000, 1000, 0x01010000, 0xBB)}
+	obj2, err := EncodeCanonical(nil, makeFragment(t, 2, 93000, samples2), samplePayload(samples2), NewState(), moov)
+	require.NoError(t, err)
+	eff2, _, err := Decode(obj2, NewState(), moov)
+	require.NoError(t, err)
+	chunk2, err := ReconstructCanonical(moov, eff2)
+	require.NoError(t, err)
+	box2, err := mp4.DecodeBox(0, bytes.NewReader(chunk2))
+	require.NoError(t, err)
+	require.False(t, box2.(*mp4.MoofBox).Traf.Tfhd.HasDefaultSampleSize())
+}
+
+// TestSubsampleSumMismatchRejects: per the draft's security rules, the
+// subsample map of each sample with a non-zero count must cover the
+// sample exactly.
+func TestSubsampleSumMismatchRejects(t *testing.T) {
+	moov := buildSyntheticMoov(t, 0x01010000)
+	addTenc(t, moov, 0)
+	var props []byte
+	props = vi64.Append(props, uint64(idTfhdDefaultSampleSize)) // 6
+	props = vi64.Append(props, 100)
+	props = vi64.Append(props, uint64(idTfdtBaseMediaDecodeTime)) // 10
+	props = vi64.Append(props, 0)
+	props = vi64.Append(props, uint64(idSencSubsampleCount)) // 11
+	props = vi64.Append(props, 1)
+	props = vi64.Append(props, 1)
+	props = vi64.Append(props, uint64(idSencBytesOfClearData)) // 13
+	props = vi64.Append(props, 1)
+	props = vi64.Append(props, 10)
+	props = vi64.Append(props, uint64(idTrunSampleCount)) // 14
+	props = vi64.Append(props, 1)
+	props = vi64.Append(props, uint64(idSencBytesOfProtectedData)) // 15
+	props = vi64.Append(props, 1)
+	props = vi64.Append(props, 20) // 10 + 20 != 100
+	obj := vi64.Append(nil, ElementTypeFullHeader)
+	obj = vi64.Append(obj, uint64(len(props)))
+	obj = append(obj, props...)
+	obj = append(obj, bytes.Repeat([]byte{0xEE}, 100)...)
+
+	_, _, err := Decode(obj, NewState(), moov)
+	require.ErrorIs(t, err, ErrMalformed)
+	require.ErrorContains(t, err, "subsample bytes")
+}
+
+// TestCENCOnUnprotectedTrackRejects: CENC fields on a track whose CMAF
+// Header signals no protection are malformed.
+func TestCENCOnUnprotectedTrackRejects(t *testing.T) {
+	moov := buildSyntheticMoov(t, 0x01010000) // no tenc
+	var props []byte
+	props = vi64.Append(props, uint64(idSencInitializationVector)) // 9
+	props = vi64.Append(props, 8)
+	props = append(props, bytes.Repeat([]byte{0x0F}, 8)...)
+	props = vi64.Append(props, uint64(idTfdtBaseMediaDecodeTime)) // 10
+	props = vi64.Append(props, 0)
+	props = vi64.Append(props, uint64(idTrunSampleCount)) // 14
+	props = vi64.Append(props, 1)
+	props = vi64.Append(props, uint64(idSencPerSampleIVSize)) // 16
+	props = vi64.Append(props, 8)
+	obj := vi64.Append(nil, ElementTypeFullHeader)
+	obj = vi64.Append(obj, uint64(len(props)))
+	obj = append(obj, props...)
+	obj = append(obj, bytes.Repeat([]byte{0xEE}, 100)...)
+
+	_, _, err := Decode(obj, NewState(), moov)
+	require.ErrorIs(t, err, ErrMalformed)
+	require.ErrorContains(t, err, "unprotected")
+}
+
+// TestEncodeSizeMismatchRejects: a source whose sample sizes do not
+// cover the mdat payload exactly cannot round-trip (the receiver
+// derives sizes from the payload length) and is rejected at encode.
+func TestEncodeSizeMismatchRejects(t *testing.T) {
+	moov := buildSyntheticMoov(t, 0x01010000)
+	samples := []mp4.FullSample{
+		mkSample(3000, 800, 0x02000000, 0xAA),
+		mkSample(3000, 700, 0x01010000, 0xBB),
+	}
+	payload := append(samplePayload(samples), 0x00) // 1 padding byte
+	_, err := EncodeCanonical(nil, makeFragment(t, 1, 0, samples), payload, NewState(), moov)
+	require.ErrorIs(t, err, ErrBadSource)
+	require.ErrorContains(t, err, "sizes sum")
+}
+
+// TestUnsupportedSourceBoxRejects: boxes outside the LOCMAF field model
+// (sample groups, per-fragment pssh) must be rejected, not silently
+// dropped.
+func TestUnsupportedSourceBoxRejects(t *testing.T) {
+	moov := buildSyntheticMoov(t, 0x01010000)
+	samples := []mp4.FullSample{mkSample(3000, 800, 0x01010000, 0xAA)}
+
+	moof := makeFragment(t, 1, 0, samples)
+	require.NoError(t, moof.Traf.AddChild(&mp4.SbgpBox{GroupingType: "seig"}))
+	_, err := EncodeCanonical(nil, moof, samplePayload(samples), NewState(), moov)
+	require.ErrorIs(t, err, ErrBadSource)
+	require.ErrorContains(t, err, "sbgp")
+
+	moof2 := makeFragment(t, 1, 0, samples)
+	require.NoError(t, moof2.AddChild(&mp4.PsshBox{}))
+	_, err = EncodeCanonical(nil, moof2, samplePayload(samples), NewState(), moov)
+	require.ErrorIs(t, err, ErrBadSource)
+}
+
+// TestDeltaShrinkToZeroSamples: a delta may shrink trunSampleCount to 0
+// (an event-only tail chunk); inherited per-sample lists truncate to
+// empty, including the n−1-sized trunSampleSizes.
+func TestDeltaShrinkToZeroSamples(t *testing.T) {
+	moov := buildSyntheticMoov(t, 0x01010000)
+	samples := []mp4.FullSample{
+		mkSample(3000, 800, 0x01010000, 0xAA),
+		mkSample(3000, 700, 0x01010000, 0xBB),
+		mkSample(3000, 600, 0x01010000, 0xCC),
+	}
+	tx, rx := NewState(), NewState()
+	obj1, err := EncodeCanonical(nil, makeFragment(t, 1, 0, samples), samplePayload(samples), tx, moov)
+	require.NoError(t, err)
+	_, _, err = Decode(obj1, rx, moov)
+	require.NoError(t, err)
+
+	// Hand-craft the shrink-to-zero delta: field 14 delta = -3.
+	var props []byte
+	props = vi64.Append(props, uint64(idTrunSampleCount))
+	props = vi64.AppendZigzag(props, -3)
+	obj2 := vi64.Append(nil, ElementTypeDeltaHeader)
+	obj2 = vi64.Append(obj2, uint64(len(props)))
+	obj2 = append(obj2, props...)
+
+	eff, _, err := Decode(obj2, rx, moov)
+	require.NoError(t, err)
+	require.Equal(t, 0, eff.SampleCount)
+	require.Empty(t, eff.Sizes)
+	require.Equal(t, uint64(9000), eff.BMDT)
+}
+
+// TestStatePoisonedAfterError: a malformed Object is a loss of in-group
+// sync — a subsequent delta must be rejected until a full header
+// re-anchors.
+func TestStatePoisonedAfterError(t *testing.T) {
+	moov := buildSyntheticMoov(t, 0x01010000)
+	samples := []mp4.FullSample{mkSample(3000, 700, 0x01010000, 0xAA)}
+	payload := samplePayload(samples)
+	tx, rx := NewState(), NewState()
+	obj1, err := EncodeCanonical(nil, makeFragment(t, 1, 0, samples), payload, tx, moov)
+	require.NoError(t, err)
+	obj2, err := EncodeCanonical(nil, makeFragment(t, 2, 3000, samples), payload, tx, moov)
+	require.NoError(t, err)
+
+	_, _, err = Decode(obj1, rx, moov)
+	require.NoError(t, err)
+	_, _, err = Decode([]byte{0x63}, rx, moov) // unknown element type
+	require.ErrorIs(t, err, ErrMalformed)
+	_, _, err = Decode(obj2, rx, moov)
+	require.ErrorIs(t, err, ErrMalformed, "delta after a malformed object must not apply")
+}
+
+// TestEmptyPresentSizeList: a present-but-empty trunSampleSizes selects
+// the listed branch — accepted at n == 1 (exactly n−1 = 0 entries, size
+// derived from P without consulting other sources), rejected at n == 2.
+func TestEmptyPresentSizeList(t *testing.T) {
+	moov := buildSyntheticMoov(t, 0x01010000)
+
+	mkObj := func(n uint64, mdatLen int) []byte {
+		var props []byte
+		props = vi64.Append(props, uint64(idTrunSampleSizes)) // 1, empty
+		props = vi64.Append(props, 0)
+		props = vi64.Append(props, uint64(idTfhdDefaultSampleSize)) // 6
+		props = vi64.Append(props, 5)
+		props = vi64.Append(props, uint64(idTfdtBaseMediaDecodeTime)) // 10
+		props = vi64.Append(props, 0)
+		props = vi64.Append(props, uint64(idTrunSampleCount)) // 14
+		props = vi64.Append(props, n)
+		obj := vi64.Append(nil, ElementTypeFullHeader)
+		obj = vi64.Append(obj, uint64(len(props)))
+		obj = append(obj, props...)
+		return append(obj, bytes.Repeat([]byte{0xEE}, mdatLen)...)
+	}
+
+	eff, _, err := Decode(mkObj(1, 3), NewState(), moov)
+	require.NoError(t, err)
+	require.Equal(t, []uint32{3}, eff.Sizes, "listed branch: size = P, field 6 not consulted")
+
+	_, _, err = Decode(mkObj(2, 10), NewState(), moov)
+	require.ErrorIs(t, err, ErrMalformed, "present list must carry exactly n-1 entries")
 }

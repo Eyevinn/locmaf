@@ -69,15 +69,18 @@ func deriveLayout(eff *EffectiveValues, trex *mp4.TrexBox) (*canonicalLayout, er
 			l.durPresent = true
 		}
 
-		if n > 1 {
-			if allEqualU32(eff.Sizes) {
-				if eff.Sizes[0] != trex.DefaultSampleSize {
-					l.defSizePresent = true
-					l.defSize = eff.Sizes[0]
-				}
-			} else {
-				l.sizePresent = true
+		// Uniform sizes (n == 1 is trivially uniform) ride as a tfhd
+		// default when they differ from trex. The wire omits a single
+		// sample's size, but the canonical CMAF chunk must still carry
+		// it: ISO BMFF has no rule deriving a sample size from the
+		// mdat length.
+		if allEqualU32(eff.Sizes) {
+			if eff.Sizes[0] != trex.DefaultSampleSize {
+				l.defSizePresent = true
+				l.defSize = eff.Sizes[0]
 			}
+		} else {
+			l.sizePresent = true
 		}
 
 		switch {
@@ -171,12 +174,57 @@ func (l *canonicalLayout) saizSize() int {
 	return size
 }
 
+// validateEffective checks the internal consistency of caller-supplied
+// effective values, so the reconstruction below cannot index past a
+// vector. Values produced by Decode always pass.
+func validateEffective(eff *EffectiveValues) error {
+	n := eff.SampleCount
+	if n < 0 {
+		return fmt.Errorf("negative sample count: %w", ErrMalformed)
+	}
+	if len(eff.Durations) != n || len(eff.Sizes) != n || len(eff.Flags) != n || len(eff.CTOs) != n {
+		return fmt.Errorf("per-sample vectors (%d, %d, %d, %d) do not match sample count %d: %w",
+			len(eff.Durations), len(eff.Sizes), len(eff.Flags), len(eff.CTOs), n, ErrMalformed)
+	}
+	var sizeSum uint64
+	for _, s := range eff.Sizes {
+		sizeSum += uint64(s)
+	}
+	if sizeSum != uint64(len(eff.MdatPayload)) {
+		return fmt.Errorf("sample sizes sum to %d but the mdat payload is %d bytes: %w",
+			sizeSum, len(eff.MdatPayload), ErrMalformed)
+	}
+	if want := int(eff.PerSampleIVSize) * n; len(eff.IVs) != want {
+		return fmt.Errorf("IV payload is %d bytes, expected %d: %w", len(eff.IVs), want, ErrMalformed)
+	}
+	if eff.HasSubsamples {
+		if len(eff.SubsampleCounts) != n {
+			return fmt.Errorf("subsample count vector has %d entries for %d samples: %w",
+				len(eff.SubsampleCounts), n, ErrMalformed)
+		}
+		total := 0
+		for _, c := range eff.SubsampleCounts {
+			total += int(c)
+		}
+		if len(eff.ClearBytes) != total || len(eff.ProtectedBytes) != total {
+			return fmt.Errorf("subsample byte vectors (%d, %d) do not match total count %d: %w",
+				len(eff.ClearBytes), len(eff.ProtectedBytes), total, ErrMalformed)
+		}
+	} else if len(eff.SubsampleCounts) != 0 || len(eff.ClearBytes) != 0 || len(eff.ProtectedBytes) != 0 {
+		return fmt.Errorf("subsample vectors present without HasSubsamples: %w", ErrMalformed)
+	}
+	return nil
+}
+
 // ReconstructCanonical builds the canonical CMAF chunk bytes — each
 // genBox wrapped as an ISO box, the moof, and the mdat — from the
 // chunk's effective values and the CMAF Header's moov.
 func ReconstructCanonical(moov *mp4.MoovBox, eff *EffectiveValues) ([]byte, error) {
 	if moov == nil || moov.Mvex == nil || moov.Mvex.Trex == nil {
 		return nil, fmt.Errorf("moov or trex not defined: %w", ErrMalformed)
+	}
+	if err := validateEffective(eff); err != nil {
+		return nil, err
 	}
 	if uint64(len(eff.MdatPayload)) > 0xFFFFFFF7 {
 		return nil, fmt.Errorf("mdat payload exceeds 32-bit box size: %w", ErrMalformed)
@@ -207,6 +255,11 @@ func ReconstructCanonical(moov *mp4.MoovBox, eff *EffectiveValues) ([]byte, erro
 		trafSize += saizSize + saioSize + l.sencSize(eff)
 	}
 	moofSize := 8 + mfhdSize + trafSize
+	// data_offset is a signed 32-bit field; a moof anywhere near that
+	// bound is far outside any real chunk.
+	if uint64(moofSize)+8 > 0x7FFFFFFF {
+		return nil, fmt.Errorf("moof size %d overflows trun.data_offset: %w", moofSize, ErrMalformed)
+	}
 
 	total := moofSize + 8 + len(eff.MdatPayload)
 	for _, gb := range eff.GenBoxes {

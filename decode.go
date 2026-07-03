@@ -22,10 +22,23 @@ const maxSampleCount = 1 << 24
 // full); it must not be nil. Callers use one State per MOQT group, in
 // object order, and Reset it (or use a fresh one) at every group
 // boundary.
+//
+// On error, prev is Reset: a malformed Object is a loss of in-group
+// sync, so subsequent delta chunks are rejected until the next full
+// header or rawBoxes Object re-anchors, matching the receiver rule for
+// gaps.
 func Decode(payload []byte, prev *State, moov *mp4.MoovBox) (*EffectiveValues, []byte, error) {
 	if prev == nil {
 		return nil, nil, fmt.Errorf("prev state must not be nil: %w", ErrMalformed)
 	}
+	eff, raw, err := decodeObject(payload, prev, moov)
+	if err != nil {
+		prev.Reset()
+	}
+	return eff, raw, err
+}
+
+func decodeObject(payload []byte, prev *State, moov *mp4.MoovBox) (*EffectiveValues, []byte, error) {
 	if moov == nil || moov.Mvex == nil || moov.Mvex.Trex == nil {
 		return nil, nil, fmt.Errorf("moov or trex not defined: %w", ErrMalformed)
 	}
@@ -549,13 +562,20 @@ func expandEffective(cf *chunkFields, genBoxes []GenBox, mdat []byte, moov *mp4.
 		}
 	}
 
-	// Sizes per the sample-size derivation.
+	// Sizes per the sample-size derivation. Presence of the listed
+	// field is tracked by map key, not slice nil-ness: a present-but-
+	// empty ID 1 selects the listed branch (and rejects unless it
+	// carries exactly the expected number of entries).
 	eff.Sizes = make([]uint32, n)
+	listed, hasListed := cf.lists[idTrunSampleSizes]
 	switch {
-	case cf.lists[idTrunSampleSizes] != nil:
-		listed := cf.lists[idTrunSampleSizes]
-		if len(listed) != n-1 {
-			return nil, fmt.Errorf("size list has %d elements, expected %d: %w", len(listed), n-1, ErrMalformed)
+	case hasListed:
+		want := n - 1
+		if n == 0 {
+			want = 0
+		}
+		if len(listed) != want {
+			return nil, fmt.Errorf("size list has %d elements, expected %d: %w", len(listed), want, ErrMalformed)
 		}
 		var sum uint64
 		for i, s := range listed {
@@ -565,20 +585,22 @@ func expandEffective(cf *chunkFields, genBoxes []GenBox, mdat []byte, moov *mp4.
 			eff.Sizes[i] = uint32(s)
 			sum += s
 		}
-		if sum > P {
-			return nil, fmt.Errorf("listed sample sizes exceed mdat payload: %w", ErrMalformed)
+		if n > 0 {
+			if sum > P {
+				return nil, fmt.Errorf("listed sample sizes exceed mdat payload: %w", ErrMalformed)
+			}
+			last := P - sum
+			if last > 0xFFFFFFFF {
+				return nil, fmt.Errorf("derived last sample size overflows 32 bits: %w", ErrMalformed)
+			}
+			eff.Sizes[n-1] = uint32(last)
 		}
-		last := P - sum
-		if last > 0xFFFFFFFF {
-			return nil, fmt.Errorf("derived last sample size overflows 32 bits: %w", ErrMalformed)
-		}
-		eff.Sizes[n-1] = uint32(last)
 	default:
 		// Derivation order: an explicit tfhd default wins; then the
 		// n == 1 rule (the encoder MUST omit all size information for a
 		// single sample, so its size is always P — checked before the
 		// trex fallback, which could otherwise contradict P); then a
-		// non-zero trex default.
+		// non-zero trex default; then the all-zero-size case (P == 0).
 		size, hasDefault := cf.scalars[idTfhdDefaultSampleSize]
 		if !hasDefault && n != 1 && trex.DefaultSampleSize != 0 {
 			size, hasDefault = uint64(trex.DefaultSampleSize), true
@@ -600,6 +622,9 @@ func expandEffective(cf *chunkFields, genBoxes []GenBox, mdat []byte, moov *mp4.
 				return nil, fmt.Errorf("single sample size overflows 32 bits: %w", ErrMalformed)
 			}
 			eff.Sizes[0] = uint32(P)
+		case P == 0:
+			// Uniform zero-size samples (e.g. an event track with
+			// several zero-size samples per chunk): all sizes are 0.
 		case n > 1:
 			return nil, fmt.Errorf("no sample size information for %d samples: %w", n, ErrMalformed)
 		}
@@ -649,8 +674,21 @@ func expandEffective(cf *chunkFields, genBoxes []GenBox, mdat []byte, moov *mp4.
 		}
 	}
 
-	// CENC auxiliary information.
+	// CENC auxiliary information. The CENC fields apply only to
+	// protected tracks: reject them outright when the CMAF Header does
+	// not signal protection, since the canonical senc/saiz/saio
+	// reconstruction is defined only for protected tracks.
 	tenc := getTenc(moov, trackID)
+	if tenc == nil || tenc.DefaultIsProtected != 1 {
+		_, hasIVSize := cf.scalars[idSencPerSampleIVSize]
+		_, hasIVs := cf.rawBlobs[idSencInitializationVector]
+		_, hasCounts := cf.lists[idSencSubsampleCount]
+		_, hasClear := cf.lists[idSencBytesOfClearData]
+		_, hasProt := cf.lists[idSencBytesOfProtectedData]
+		if hasIVSize || hasIVs || hasCounts || hasClear || hasProt {
+			return nil, fmt.Errorf("CENC fields on an unprotected track: %w", ErrMalformed)
+		}
+	}
 	ivSize := uint64(0)
 	if tenc != nil {
 		ivSize = uint64(tenc.DefaultPerSampleIVSize)
@@ -708,8 +746,31 @@ func expandEffective(cf *chunkFields, genBoxes []GenBox, mdat []byte, moov *mp4.
 			eff.ClearBytes[i] = uint16(clear[i])
 			eff.ProtectedBytes[i] = uint32(prot[i])
 		}
-	} else if cf.lists[idSencBytesOfClearData] != nil || cf.lists[idSencBytesOfProtectedData] != nil {
-		return nil, fmt.Errorf("subsample byte lists without subsample counts: %w", ErrMalformed)
+		// The subsample map of a sample with a non-zero count must
+		// cover the sample exactly (a zero-count sample carries no
+		// map and is unconstrained).
+		subIdx := 0
+		for i := 0; i < n; i++ {
+			cnt := int(eff.SubsampleCounts[i])
+			if cnt == 0 {
+				continue
+			}
+			var sum uint64
+			for j := 0; j < cnt; j++ {
+				sum += uint64(eff.ClearBytes[subIdx]) + uint64(eff.ProtectedBytes[subIdx])
+				subIdx++
+			}
+			if sum != uint64(eff.Sizes[i]) {
+				return nil, fmt.Errorf("subsample bytes sum to %d for sample %d of size %d: %w",
+					sum, i, eff.Sizes[i], ErrMalformed)
+			}
+		}
+	} else {
+		_, hasClear := cf.lists[idSencBytesOfClearData]
+		_, hasProt := cf.lists[idSencBytesOfProtectedData]
+		if hasClear || hasProt {
+			return nil, fmt.Errorf("subsample byte lists without subsample counts: %w", ErrMalformed)
+		}
 	}
 
 	return eff, nil

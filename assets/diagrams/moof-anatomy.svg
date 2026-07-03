@@ -66,7 +66,7 @@
     <rect x="0" y="0" width="364" height="316" rx="8" fill="#1f1f1f" stroke="#646464" stroke-width="1"/>
 
     <rect x="12" y="14"  width="340" height="26" rx="4" fill="#61B5E5" opacity="0.22" stroke="#61B5E5"/>
-    <text x="24" y="32" class="field">MoofDeltaHeader = 25  (1 B)</text>
+    <text x="24" y="32" class="field">locmafDeltaHeader = 3  (1 B)</text>
 
     <rect x="12" y="48"  width="340" height="26" rx="4" fill="#61B5E5" opacity="0.22" stroke="#61B5E5"/>
     <text x="24" y="66" class="field">properties_length = 0  (1 B)</text>
@@ -80,12 +80,12 @@
     <text x="24" y="162" class="note">  no `size + 'mdat'` header — implied</text>
 
     <rect x="12" y="180" width="340" height="120" rx="4" fill="none" stroke="#444" stroke-dasharray="3 3"/>
-    <text x="24" y="200" class="field">on IDR / discontinuity, the delta emits:</text>
+    <text x="24" y="200" class="field">on an IDR transition, the delta emits:</text>
     <text x="36" y="220" class="note">trunSampleFlags  (delta from previous)</text>
-    <text x="36" y="238" class="note">trunFirstSampleFlags  (or deletion)</text>
-    <text x="36" y="256" class="note">tfdtBaseMediaDecodeTime  (absolute)</text>
-    <text x="24" y="282" class="field">→ ~4–5 B at the transition,</text>
-    <text x="24" y="298" class="field">   back to 2 B immediately after.</text>
+    <text x="36" y="238" class="note">trunFirstSampleFlags  (or deletion, ID 27)</text>
+    <text x="24" y="258" class="field">→ ~4–5 B, back to 2 B immediately after.</text>
+    <text x="24" y="282" class="field">timeline discontinuity (splice)?</text>
+    <text x="24" y="298" class="field">→ re-anchor with a full header (2).</text>
   </g>
 
   <!-- Legend with more horizontal spread so swatch and text don't collide. -->

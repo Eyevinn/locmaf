@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-The information site for **LOCMAF** (Low Overhead CMAF for MOQ) — published at <https://locmaf.dev>. LOCMAF itself is a wire format defined and implemented elsewhere (in `Eyevinn/moqlivemock`); this repo only contains the marketing/explanatory site plus a MARP slide deck.
+The information site for **LOCMAF** (Low Overhead CMAF for MOQ) — published at <https://locmaf.dev>. LOCMAF itself is defined elsewhere (the Internet-Draft `draft-einarsson-moq-locmaf`, source in `Eyevinn/locmaf-id`) and implemented in `Eyevinn/moqlivemock` and `Eyevinn/warp-player`; this repo only contains the marketing/explanatory site plus a MARP slide deck.
 
 The primary surface is the static landing page (`site/index.html`). The slide deck (`slides/locmaf.md`) is a secondary artifact published at `/slides/`.
 
@@ -44,7 +44,7 @@ The two halves intentionally **share** `assets/` (logos and `assets/diagrams/*.s
 Every diagram and the site CSS follow this convention — keep it consistent when adding or editing visuals:
 
 - **Orange (#FC9900)** — CMAF / source side (moof, segment outlines, CMAF totals)
-- **Cyan (#61B5E5)** — anything on the LOCMAF wire (full moof box, delta moof, header_id, properties_length, MoQ groups/objects)
+- **Cyan (#61B5E5)** — anything on the LOCMAF wire (full moof box, delta moof, element_type, properties_length, MoQ groups/objects)
 - **Gray (#646464)** — raw mdat / sample data (unchanged by LOCMAF)
 - **Green (#33aa55)** — "omitted" in `moof-anatomy.svg` only (matches trex / implicit)
 
@@ -56,4 +56,4 @@ All diagrams under `assets/diagrams/` are hand-written SVG (no build step), desi
 
 ### Spec source of truth
 
-The full LOCMAF specification lives at `Eyevinn/moqlivemock:docs/LOCMAF.md` (not in this repo). The site copy and slide deck are summarized from it. When the spec changes, the byte counts / object IDs / field tables here must follow.
+The LOCMAF specification is the Internet-Draft `draft-einarsson-moq-locmaf` (source in `Eyevinn/locmaf-id`, published via the datatracker). The site copy and slide deck are summarized from it. When the spec changes, the byte counts / element types / field tables here must follow. The site currently describes wire v0.3 (element types 1 = genBox, 2 = full, 3 = delta; vi64 integers; no IANA actions).

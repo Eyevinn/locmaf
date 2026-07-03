@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta name="color-scheme" content="dark"/>
 <title>LOCMAF — Low Overhead CMAF for MOQ</title>
-<meta name="description" content="LOCMAF is a low-overhead wire format for streaming CMAF over MOQ Transport. It compresses consecutive moof headers by ~45:1 while reconstructing byte-identical samples at the receiver."/>
+<meta name="description" content="LOCMAF is a compact CMAF packaging for MOQ Transport. It compresses consecutive moof headers by ~45:1 while reconstructing byte-identical samples at the receiver."/>
 <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg"/>
 <link rel="stylesheet" href="./styles.css"/>
 <meta name="theme-color" content="#0e0e0e"/>
 <meta property="og:title" content="LOCMAF — Low Overhead CMAF for MOQ"/>
-<meta property="og:description" content="A compact wire format for CMAF over MOQ — including DRM-protected content. Sample-level objects, delta moof as small as 2 bytes, functionally lossless playback."/>
+<meta property="og:description" content="A compact CMAF packaging for MOQ — including DRM-protected content. Sample-level objects, delta moof as small as 2 bytes, functionally lossless playback."/>
 <meta property="og:url" content="https://locmaf.dev"/>
 <meta property="og:type" content="website"/>
 </head>
@@ -25,7 +25,7 @@
       <nav>
         <a href="#how">How it works</a>
         <a href="#numbers">Numbers</a>
-        <a href="#wire">Wire format</a>
+        <a href="#wire">Packaging</a>
         <a href="#drm">DRM</a>
         <a href="#resources">Resources</a>
       </nav>
@@ -39,7 +39,7 @@
 <header class="hero" id="top">
   <img src="./assets/logo-dark.svg" class="wordmark" alt="LOCMAF — Low Overhead CMAF for MOQ"/>
   <div class="blurb">
-    A new, compact wire format for streaming CMAF over MOQ Transport<br/>
+    A compact CMAF packaging for MOQ Transport<br/>
     — <strong>including DRM-protected content</strong>.
     Sample-level objects with a delta moof <strong>as small as 2 bytes</strong>,
     reconstructed into <strong>functionally lossless</strong> CMAF chunks at the receiver.
@@ -104,7 +104,8 @@
       <li><strong>Delta encoding within a group</strong> — the first moof per group is full; every subsequent moof carries only the fields whose value changed since the previous moof.</li>
     </ul>
     <p>
-      <code>base_media_decode_time</code> is derived implicitly from the previous moof's sample durations.
+      <code>base_media_decode_time</code> is derived implicitly from the previous moof's sample durations;
+      a timeline discontinuity (splice, capture gap) re-anchors with a new full header.
       The <code>mdat</code> box header never goes on the wire — its length is implied by the MoQ object length.
     </p>
     <figure class="figure">
@@ -141,7 +142,7 @@
     </div>
     <figure class="figure" style="margin-top:32px;">
       <img src="./assets/diagrams/bytes-saved.svg" alt="Bar chart comparing 26 040 bytes of CMAF moof overhead to 592 bytes of LOCMAF wire bytes."/>
-      <figcaption>Re-runnable via <code>go run ./cmd/locmaf roundtrip -verbose</code>.</figcaption>
+      <figcaption>Measured with the v0.2 implementation; v0.3 keeps the same 2-byte steady state.</figcaption>
     </figure>
     <figure class="figure">
       <img src="./assets/diagrams/delta-stream.svg" alt="Timeline of one MoQ group: a full moof followed by a brief IDR-transition delta and then a long run of 2-byte steady-state delta moofs."/>
@@ -162,7 +163,6 @@
     <p>
       The 128 kbps AAC track lands within ~3% of the raw sample bitrate —
       the remaining LOCMAF overhead is ~2 B/object × ~47 obj/s ≈ 0.75 kbps plus the MoQ object framing.
-      Full per-track table (Opus, AC-3, HEVC, 600 / 900 kbps video) is in <code>docs/LOCMAF.md</code>.
     </p>
   </div>
 </section>
@@ -170,40 +170,43 @@
 <section class="band" id="wire">
   <div class="container">
     <header>
-      <span class="eyebrow">Wire format</span>
+      <span class="eyebrow">Packaging</span>
       <h2>One framing for every object kind</h2>
     </header>
     <figure class="figure">
-      <img src="./assets/diagrams/object-framing.svg" alt="LOCMAF object framing: header_id varint, properties_length varint, properties block, mdat raw payload."/>
+      <img src="./assets/diagrams/object-framing.svg" alt="LOCMAF object framing: element_type vi64, properties_length vi64, properties block, mdat raw payload."/>
     </figure>
-    <h3>Top-level object IDs</h3>
+    <h3>An element sequence</h3>
+    <p>
+      Every MoQ object is zero or more <code>genBox</code> elements, exactly one
+      moof header (full or delta), and the raw <code>mdat</code> payload.
+      Each element starts with an <code>element_type</code> <a href="https://datatracker.ietf.org/doc/draft-ietf-moq-transport/"><code>vi64</code></a>:
+    </p>
     <table>
-      <thead><tr><th>ID</th><th>Symbol</th><th>Object kind</th></tr></thead>
+      <thead><tr><th>element_type</th><th>Symbol</th><th>Meaning</th></tr></thead>
       <tbody>
-        <tr><td>23</td><td>LocmafFullHeader</td><td>full chunk (styp / prft / emsg / moof + mdat)</td></tr>
-        <tr><td>25</td><td>LocmafDeltaHeader</td><td>delta chunk (prft / emsg / moof + mdat)</td></tr>
+        <tr><td>1</td><td>genBox</td><td>one generic pre-moof box (styp / prft / emsg / uuid), carried verbatim</td></tr>
+        <tr><td>2</td><td>locmafFullHeader</td><td>full moof header (absolute encoding)</td></tr>
+        <tr><td>3</td><td>locmafDeltaHeader</td><td>delta moof header (in-group deltas)</td></tr>
       </tbody>
     </table>
     <p>
-      <strong>From v0.2 the <code>moov</code> box is no longer compressed.</strong>
-      The CMAF Header is delivered as raw, uncompressed bytes via the
-      MSF / CMSF catalog (the same <code>initData</code> bytes a plain
-      <code>cmaf</code> packaging track uses), so v0.2 no longer needs the
-      v0.1 <code>MoovHeader = 21</code> object kind. Init compression is a
-      one-time-per-track cost; LOCMAF concentrates on the per-chunk overhead.
+      The CMAF Header (init) is delivered verbatim via the MSF / CMSF
+      catalog — the same init-data entry a plain <code>cmaf</code> track uses,
+      so the two packagings of one source can share it. Init is a
+      one-time-per-track cost; LOCMAF compresses the per-chunk overhead.
     </p>
     <p>
-      Values 23 and 25 sit in the public MOQT object-kind ID space and
-      need an IANA registration — requested by the IETF LOCMAF draft
-      (<a href="https://datatracker.ietf.org/doc/draft-einarsson-moq-locmaf/">draft-einarsson-moq-locmaf</a>).
-      Unknown <code>header_id</code> values are logged and skipped using
-      <code>properties_length</code>, so the format extends without breaking
-      older decoders.
+      No codepoints leave the LOCMAF payload, so nothing needs an IANA registry:
+      the catalog's <code>packaging: "locmaf"</code> declaration scopes the bytes
+      before any object arrives. Extension happens through new <code>genBox</code>
+      box types and new field IDs (unknown field IDs are skipped via the parity
+      rule); the element types themselves are fixed per <code>locmafVersion</code>.
     </p>
     <h3>Steady-state delta moof in two bytes</h3>
     <figure class="delta-moof">
       <div class="row framing">
-        <div class="label">MoofDeltaHeader = 25</div>
+        <div class="label">locmafDeltaHeader = 3</div>
         <div class="size">1 B</div>
       </div>
       <div class="row framing">
@@ -265,12 +268,13 @@
       "pssh": "base64-pssh-box"
     }
   }],
+  "initDataList": [{ "id": "v1init", "type": "base64", "data": "..." }],
   "tracks": [{
     "name": "video_400kbps_avc_drm",
     "packaging": "locmaf",
-    "locmafVersion": "0.1",
+    "locmafVersion": "0.3",
     "contentProtectionRefIDs": ["widevine", "playready", "fairplay"],
-    "initData": "..."
+    "initRef": "v1init"
   }]
 }</code></pre>
     <p>
@@ -305,7 +309,8 @@
     <p>
       LOCMAF saves <em>more</em> relative to CMAF on DRM-protected content than on clear content —
       the CMAF moof grows under encryption (extra <code>senc</code> / <code>saio</code> / <code>saiz</code>) while LOCMAF only emits what it actually needs.
-      Full per-track tables (Opus, AC-3, HEVC, 600 / 900 kbps) are in <code>docs/LOCMAF.md</code>.
+      The receiver regenerates <code>senc</code>, <code>saiz</code>, and <code>saio</code> canonically,
+      and the scheme is carried agnostically — <code>cbc1</code> and <code>cens</code> ride the same fields.
     </p>
   </div>
 </section>
@@ -343,7 +348,7 @@
       each CMAF Chunk is <strong>one <code>moof</code> followed by exactly one <code>mdat</code></strong>
       (§7.3.3.2), and each <code>traf</code> contains <strong>exactly one <code>trun</code></strong> (Table 4).
       These restrictions are what make LOCMAF's "one MoQ object = one moof + one mdat" mapping unambiguous —
-      a varint header_id, a properties block, and the rest of the object is mdat payload.
+      a short element sequence, and the rest of the object is mdat payload.
     </p>
     <p>
       General fragmented MP4 may contain multiple <code>traf</code> / <code>trun</code> boxes per moof,
@@ -364,7 +369,7 @@
       <a class="res" href="./slides/">
         <span class="label">Presentation</span>
         <span class="title">LOCMAF slide deck</span>
-        <span class="desc">A 20-slide MARP deck adapted from the LOCMAF specification.</span>
+        <span class="desc">A MARP slide deck summarizing the LOCMAF design.</span>
       </a>
       <a class="res" href="https://github.com/Eyevinn/moqlivemock">
         <span class="label">Reference impl</span>
@@ -384,7 +389,7 @@
       <a class="res" href="https://datatracker.ietf.org/doc/draft-einarsson-moq-locmaf/">
         <span class="label">Spec</span>
         <span class="title">draft-einarsson-moq-locmaf</span>
-        <span class="desc">The LOCMAF Internet-Draft — wire format, CMSF catalog signalling, and receiver reconstruction.</span>
+        <span class="desc">The LOCMAF Internet-Draft — object encoding, CMSF catalog signalling, and canonical reconstruction.</span>
       </a>
       <a class="res" href="https://datatracker.ietf.org/doc/draft-ietf-moq-cmsf/">
         <span class="label">Spec</span>
@@ -429,17 +434,18 @@
       <div>
         <h2>Status</h2>
         <p>
-          The wire format is at <code>locmafVersion&nbsp;"0.1"</code>, advertised in the
-          CMSF catalog Track entry whenever <code>packaging == "locmaf"</code>. Receivers
-          compare against their highest supported version and fall back if the encoder is
-          ahead — this covers behavioural changes inside an existing object kind, which the
-          header-ID skip-unknown rule on its own can't detect.
+          The packaging is at <code>locmafVersion&nbsp;"0.3"</code>, specified in
+          <a href="https://datatracker.ietf.org/doc/draft-einarsson-moq-locmaf/">draft-einarsson-moq-locmaf</a>
+          and advertised in the CMSF catalog Track entry whenever
+          <code>packaging == "locmaf"</code>. Following the June 2026 MoQ interim,
+          LOCMAF is being folded into
+          <a href="https://datatracker.ietf.org/doc/draft-ietf-moq-cmsf/">CMSF</a>
+          as a packaging mode rather than proceeding as a standalone draft.
         </p>
         <p>
-          The format may still evolve based on feedback, measurement on additional codecs,
-          and the trajectory of CMSF and MOQT in the IETF. The reference encoder and decoder
-          live in <code>Eyevinn/moqlivemock</code> and the browser player in
-          <code>Eyevinn/warp-player</code>.
+          The reference encoder and decoder live in <code>Eyevinn/moqlivemock</code>
+          and the browser player in <code>Eyevinn/warp-player</code>; both currently
+          implement v0.2, with the v0.3 update in progress.
         </p>
       </div>
     </div>

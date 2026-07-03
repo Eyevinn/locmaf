@@ -9,11 +9,13 @@
 // chunk; a normative canonical reconstruction makes conformant receivers
 // byte-identical, enabling golden-vector conformance testing.
 //
-// This module is the reference implementation. The v0.3 codec is being
-// ported here from moqlivemock (see the Eyevinn/moqlivemock repository
-// for the current v0.2 implementation). The vi64 subpackage implements
-// the MOQT variable-length integer encoding and the zigzag signed
-// variant that LOCMAF uses.
+// This module is the reference implementation. EncodeCanonical produces
+// canonical LOCMAF Objects from CMAF moof boxes (choosing full or delta
+// headers per the canonical rules), Decode applies deltas and deletions
+// against the in-group State and yields the chunk's EffectiveValues,
+// and ReconstructCanonical builds the byte-exact canonical CMAF chunk
+// from them. The vi64 subpackage implements the MOQT variable-length
+// integer encoding and the zigzag signed variant that LOCMAF uses.
 //
 // Specification: https://datatracker.ietf.org/doc/draft-einarsson-moq-locmaf/
 package locmaf

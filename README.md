@@ -18,19 +18,20 @@ reconstructed into functionally lossless CMAF chunks at the receiver.
 - Explainer site and slides: <https://locmaf.dev> (source in [`web/`](web/))
 - Wire version: `locmafVersion "0.3"`
 
-## Status
-
-The Go module is being assembled: the v0.3 codec is ported here from
-[Eyevinn/moqlivemock](https://github.com/Eyevinn/moqlivemock) (which
-currently implements wire v0.2). Planned layout:
+## Layout
 
 ```
-locmaf/          package locmaf — codec: encode, decode, canonical reconstruction
+locmaf/          package locmaf — codec: EncodeCanonical, Decode, ReconstructCanonical
 ├── vi64/        MOQT vi64 varints + zigzag (stdlib-only)
-├── cmd/locmaf/  CLI: align, vectors, verify, dump
-├── testdata/    golden canonical-encoding vectors
+├── cmd/locmaf/  CLI: align, vectors, verify, dump (planned)
+├── testdata/    golden canonical-encoding vectors (planned)
 └── web/         locmaf.dev site (separate stub module, not part of the Go module)
 ```
+
+The codec implements wire v0.3: the element sequence (genBox / full /
+delta headers), vi64 integers, full 32-bit sample_flags, derived-only
+delta BMDT, scheme-agnostic CENC carriage, and the canonical
+reconstruction (byte-exact moof rebuild including senc/saiz/saio).
 
 ## Related
 

@@ -76,7 +76,7 @@ Set `PORT=9000` to pick a different port. Ctrl-C to stop.
 
 ## Style
 
-Theme follows the Eyevinn Technology brand (see `../ev-marp/` for the
+Theme follows the Eyevinn Technology brand (see `../../ev-marp/` for the
 upstream PowerPoint-aligned MARP theme):
 
 - LevelOne brand font, dark gradient background

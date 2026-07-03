@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with the locmaf.dev site in `web/`.
 
-## What this repo is
+## What this directory is
 
-The information site for **LOCMAF** (Low Overhead CMAF for MOQ) — published at <https://locmaf.dev>. LOCMAF itself is defined elsewhere (the Internet-Draft `draft-einarsson-moq-locmaf`, source in `Eyevinn/locmaf-id`) and implemented in `Eyevinn/moqlivemock` and `Eyevinn/warp-player`; this repo only contains the marketing/explanatory site plus a MARP slide deck.
+The information site for **LOCMAF** (Low Overhead CMAF for MOQ) — published at <https://locmaf.dev>. LOCMAF itself is defined in the Internet-Draft `draft-einarsson-moq-locmaf` (source in `Eyevinn/locmaf-id`); the Go reference implementation lives at the root of this repo (`github.com/Eyevinn/locmaf`), which this `web/` subtree is carved out of by a stub `go.mod`. This directory contains the explanatory site plus a MARP slide deck. Deploy from the repo root with `./update_site.sh` after `npm run build`.
 
 The primary surface is the static landing page (`site/index.html`). The slide deck (`slides/locmaf.md`) is a secondary artifact published at `/slides/`.
 
@@ -35,9 +35,9 @@ scripts/   → build-site.mjs and preview.mjs (Node, no deps)
 
 The two halves intentionally **share** `assets/` (logos and `assets/diagrams/*.svg`). Edit a diagram once and both surfaces update.
 
-### The MARP theme is a derivative of `../ev-marp`
+### The MARP theme is a derivative of `../../ev-marp`
 
-`themes/locmaf.css` is forked from the upstream Eyevinn MARP theme at `../moq-workspace/ev-marp/themes/eyevinn.css` (same brand colors, LevelOne font, slide layout). The fork swaps the bottom-left logo for the LOCMAF logomark and adds the Eyevinn logo to the footer (right of center, left of the page number). When the upstream theme adds a feature (e.g. table styling), copy the change over rather than reinventing.
+`themes/locmaf.css` is forked from the upstream Eyevinn MARP theme at `../../ev-marp/themes/eyevinn.css` (in the moq-workspace checkout) (same brand colors, LevelOne font, slide layout). The fork swaps the bottom-left logo for the LOCMAF logomark and adds the Eyevinn logo to the footer (right of center, left of the page number). When the upstream theme adds a feature (e.g. table styling), copy the change over rather than reinventing.
 
 ### Color convention (load-bearing)
 

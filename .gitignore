@@ -5,3 +5,6 @@ public/
 
 # Playwright MCP transcripts/screenshots used for local visual verification.
 .playwright-mcp/
+
+# Local deploy script (scp target is environment-specific)
+update_site.sh

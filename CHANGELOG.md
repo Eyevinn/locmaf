@@ -8,6 +8,8 @@ Each release notes which LOCMAF packaging version (`locmafVersion`) it implement
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-07-04
+
 Implements LOCMAF packaging version `"0.3"`.
 
 ### Added
@@ -18,11 +20,44 @@ Implements LOCMAF packaging version `"0.3"`.
   encoding with automatic full-header re-anchoring on BMDT
   discontinuities), `Decode` (element sequence, parity-rule property
   parsing, delta and deletion application, effective-value
-  expansion), and `ReconstructCanonical` (byte-exact canonical CMAF
-  chunk rebuild, including CENC senc/saiz/saio regeneration and the
-  omit rule). Ported from moqlivemock's internal v0.2 codec and
-  reworked for v0.3 (element types, genBox, full 32-bit
-  sample_flags, derived-only delta BMDT, vi64).
+  expansion), `ExtractEffective` (effective values straight from a
+  source moof, no wire round trip), and `ReconstructCanonical`
+  (byte-exact canonical CMAF chunk rebuild, including CENC
+  senc/saiz/saio regeneration and the omit rule). Ported from
+  moqlivemock's internal v0.2 codec and reworked for v0.3 (element
+  types, genBox, full 32-bit sample_flags, derived-only delta BMDT,
+  vi64).
+- The `rawBoxes` element (type 4): verbatim carriage of complete ISO
+  BMFF boxes as a whole Object — `EncodeRaw` on the encode side, a
+  separate raw return from `Decode`, and an in-group state reset on
+  both sides. `AppendFramed`/`NextFramed` implement the draft's
+  self-framed carriage (length-prefixed Objects), which together
+  with an in-band rawBoxes init makes the self-contained `.locmaf`
+  file format.
+- The `locmaf` CLI (`cmd/locmaf`, `go install`-able):
+  - `locmaf align [-init init.mp4] [-report text|json] input.cmaf` —
+    the CMAF round-trip conformance tool. Per fragment it asserts
+    that canonical reconstruction straight from the source moof
+    equals the encode→decode→reconstruct round trip
+    byte-identically, and reports how the canonical form normalized
+    the source bytes (box-level diff plus a hex window at the first
+    differing byte). Exit codes: 0 aligned, 1 diverged, 2 usage or
+    I/O error.
+  - `locmaf vectors gen [-out dir]` / `locmaf vectors check [dir]` —
+    generate and verify the golden-vector corpus in
+    `testdata/vectors`: 14 cases (uniform, varying sizes,
+    single-sample, negative CTOs, first-sample-flags with ID 27
+    deletion, per-sample flags, list grow/shrink, BMDT re-anchor,
+    cenc subsamples, cbcs omit, genBoxes, a strict-cmf2
+    representation-invariance pair, a rawBoxes `.locmaf` file, and
+    event-only). Each case carries the wire objects, effective-value
+    JSON, byte-exact canonical chunks, and a sha256 manifest. The
+    corpus is derived from the codec by `internal/vectorgen` and
+    re-derived in CI so it cannot drift; other implementations
+    consume it as a three-rung conformance ladder (decode →
+    effective values → canonical bytes).
+  - `locmaf -version` — tool version and commit date, injected by
+    the Makefile via ldflags.
 
 ### Changed
 
@@ -31,3 +66,5 @@ Implements LOCMAF packaging version `"0.3"`.
   `web/`, carved out of the Go module by a stub `web/go.mod`.
 - Site and slides rewritten for wire v0.3 (element types, vi64,
   packaging framing, no IANA actions) and shortened.
+
+[0.1.0]: https://github.com/Eyevinn/locmaf/releases/tag/v0.1.0

@@ -66,6 +66,9 @@ func addTenc(init *mp4.InitSegment, perSampleIVSize byte, constantIV []byte) {
 		DefaultIsProtected:     1,
 		DefaultPerSampleIVSize: perSampleIVSize,
 		DefaultConstantIV:      constantIV,
+		// DefaultKID is a slice: it must be allocated to its 16 bytes,
+		// or Encode writes a truncated tenc (Size still counts 16).
+		DefaultKID: make(mp4.UUID, 16),
 	}
 	for i := range tenc.DefaultKID {
 		tenc.DefaultKID[i] = byte(i + 1)

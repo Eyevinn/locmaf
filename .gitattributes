@@ -1,0 +1,6 @@
+# The golden-vector corpus is compared byte-for-byte against
+# codec-derived output (TestVectorsMatchDisk, `locmaf vectors check`):
+# line-ending conversion anywhere under testdata corrupts it. Windows
+# checkouts with core.autocrlf=true otherwise rewrite the JSON files —
+# and any wire object that happens to look like text — to CRLF.
+testdata/** -text

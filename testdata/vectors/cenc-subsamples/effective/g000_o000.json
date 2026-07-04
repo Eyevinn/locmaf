@@ -18,6 +18,8 @@
     0,
     0
   ],
+  "perSampleIVSize": 8,
+  "ivs": "a0a1a2a3a4a5a6a7a1a2a3a4a5a6a7a8",
   "hasSubsamples": true,
   "subsampleCounts": [
     1,

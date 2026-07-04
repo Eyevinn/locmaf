@@ -134,6 +134,12 @@ func addSenc(ch *chunkSrc, ivSize int, clearLen uint16, chunkIdx int) error {
 	traf := ch.moof.Traf
 	n := len(traf.Trun.Samples)
 	senc := &mp4.SencBox{SampleCount: uint32(n)}
+	if ivSize > 0 {
+		// SencBox derives PerSampleIVSize from AddSample or an explicit
+		// set; assigning IVs directly would leave it 0 and drop the IVs
+		// from the encoding.
+		senc.SetPerSampleIVSize(byte(ivSize))
+	}
 	for i := 0; i < n; i++ {
 		if ivSize > 0 {
 			iv := make([]byte, ivSize)

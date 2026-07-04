@@ -4,11 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-Each release notes which LOCMAF wire version (`locmafVersion`) it implements.
+Each release notes which LOCMAF packaging version (`locmafVersion`) it implements.
 
 ## [Unreleased]
 
-Implements LOCMAF wire version `"0.3"`.
+Implements LOCMAF packaging version `"0.3"`.
 
 ### Added
 

@@ -2,7 +2,7 @@ package locmaf
 
 import "errors"
 
-// Version is the LOCMAF wire-format version implemented by this package,
+// Version is the LOCMAF packaging version implemented by this package,
 // announced in the CMSF catalog Track entry as locmafVersion.
 const Version = "0.3"
 

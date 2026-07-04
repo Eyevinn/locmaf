@@ -11,7 +11,7 @@ The reference implementation of **LOCMAF** (Low Overhead CMAF for MOQ), a compac
 
 ## Spec source of truth
 
-The Internet-Draft `draft-einarsson-moq-locmaf` — source in `Eyevinn/locmaf-id`, published via the datatracker. **One wire version at a time**: this module implements exactly one `locmafVersion` (currently targeting `"0.3"`); older wire versions are reachable via old module tags, not runtime switches. Cite the version-independent draft URL, never a pinned revision.
+The Internet-Draft `draft-einarsson-moq-locmaf` — source in `Eyevinn/locmaf-id`, published via the datatracker. **One packaging version at a time**: this module implements exactly one `locmafVersion` (currently `"0.3"`); older packaging versions are reachable via old module tags, not runtime switches. Cite the version-independent draft URL, never a pinned revision.
 
 ## Commands
 
@@ -24,6 +24,6 @@ cd web && npm run build   # build the site; deploy with ./update_site.sh from th
 
 This repo is normally checked out inside the moq-workspace Go workspace (`../go.work` has `use ./locmaf`), so moqlivemock picks up local changes instantly. Releases are plain semver tags `vX.Y.Z` at the root, reserved for the Go module; `CHANGELOG.md` records which `locmafVersion` each release implements.
 
-## On a wire-version bump
+## On a packaging-version bump
 
 Four places move together: the `locmaf.Version` constant, the moqlivemock catalog gate, the msf-catalog-validator CUE pin, and the locmaf.dev version strings (see `web/`).

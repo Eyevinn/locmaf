@@ -16,7 +16,7 @@ reconstructed into functionally lossless CMAF chunks at the receiver.
 - Specification: [draft-einarsson-moq-locmaf](https://datatracker.ietf.org/doc/draft-einarsson-moq-locmaf/)
   (source: [Eyevinn/locmaf-id](https://github.com/Eyevinn/locmaf-id))
 - Explainer site and slides: <https://locmaf.dev> (source in [`web/`](web/))
-- Wire version: `locmafVersion "0.3"`
+- Packaging version: `locmafVersion "0.3"`
 
 ## Layout
 
@@ -28,7 +28,7 @@ locmaf/          package locmaf — codec: EncodeCanonical, Decode, ReconstructC
 └── web/         locmaf.dev site (separate stub module, not part of the Go module)
 ```
 
-The codec implements wire v0.3: the element sequence (genBox / full /
+The codec implements packaging version 0.3: the element sequence (genBox / full /
 delta headers), vi64 integers, full 32-bit sample_flags, derived-only
 delta BMDT, scheme-agnostic CENC carriage, and the canonical
 reconstruction (byte-exact moof rebuild including senc/saiz/saio).

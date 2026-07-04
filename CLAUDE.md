@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The reference implementation of **LOCMAF** (Low Overhead CMAF for MOQ), a compact CMAF packaging for MoQ Transport:
 
-- **Go module** `github.com/Eyevinn/locmaf` at the repo root — the codec (`package locmaf`) and the `vi64/` varint subpackage (stdlib-only). A `cmd/locmaf` CLI (align/vectors/verify/dump) and `testdata/` golden vectors are planned.
+- **Go module** `github.com/Eyevinn/locmaf` at the repo root — the codec (`package locmaf`) and the `vi64/` varint subpackage (stdlib-only). The `cmd/locmaf` CLI provides `align` (CMAF round-trip conformance) and `vectors gen`/`vectors check` (the `testdata/vectors` golden corpus, derived from the codec by `internal/vectorgen` and pinned by CI — regenerate with `vectors gen` after any wire or canonical change). `verify` and `dump` subcommands are planned.
 - **`web/`** — the locmaf.dev explainer site and MARP slide deck. It is a separate stub Go module (`web/go.mod`) so Go tooling and the module zip ignore it. See `web/CLAUDE.md` for site guidance (build, theme, diagram color conventions).
 
 ## Spec source of truth

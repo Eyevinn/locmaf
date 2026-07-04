@@ -833,3 +833,31 @@ func TestEmptyPresentSizeList(t *testing.T) {
 	_, _, err = Decode(mkObj(2, 10), NewState(), moov)
 	require.ErrorIs(t, err, ErrMalformed, "present list must carry exactly n-1 entries")
 }
+
+// TestExtractEffectiveMatchesWireRoundTrip: the direct source→effective
+// path yields the same effective values and canonical bytes as
+// encode→decode — the align tool's A == B property.
+func TestExtractEffectiveMatchesWireRoundTrip(t *testing.T) {
+	moov := buildSyntheticMoov(t, 0x01010000)
+	samples := []mp4.FullSample{
+		mkSample(3000, 800, 0x02000000, 0xAA),
+		mkSample(2990, 700, 0x01010000, 0xBB),
+	}
+	moof := makeFragment(t, 1, 90000, samples)
+	payload := samplePayload(samples)
+	gbs := []GenBox{{Name: "prft", Payload: bytes.Repeat([]byte{0x42}, 20)}}
+
+	effA, err := ExtractEffective(gbs, moof, payload, moov)
+	require.NoError(t, err)
+	chunkA, err := ReconstructCanonical(moov, effA)
+	require.NoError(t, err)
+
+	obj, err := EncodeCanonical(gbs, moof, payload, NewState(), moov)
+	require.NoError(t, err)
+	effB, _, err := Decode(obj, NewState(), moov)
+	require.NoError(t, err)
+	chunkB, err := ReconstructCanonical(moov, effB)
+	require.NoError(t, err)
+
+	require.Equal(t, chunkA, chunkB, "direct and wire-round-trip canonical bytes")
+}

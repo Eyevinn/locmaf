@@ -173,6 +173,59 @@ func extractSourceValues(moof *mp4.MoofBox, moov *mp4.MoovBox) (*sourceValues, e
 	return sv, nil
 }
 
+// ExtractEffective derives a chunk's effective values directly from a
+// source CMAF moof — resolving per-sample trun values against the tfhd
+// and trex defaults exactly as EncodeCanonical does, with no wire
+// round-trip. An interop harness uses it to reconstruct canonical bytes
+// straight from source CMAF and compare them against the
+// encode-then-decode path.
+func ExtractEffective(genBoxes []GenBox, moof *mp4.MoofBox, mdatPayload []byte,
+	moov *mp4.MoovBox) (*EffectiveValues, error) {
+	sv, err := extractSourceValues(moof, moov)
+	if err != nil {
+		return nil, err
+	}
+	eff := &EffectiveValues{
+		SampleCount:            sv.n,
+		BMDT:                   sv.bmdt,
+		SampleDescriptionIndex: sv.sdix,
+		Durations:              sv.durs,
+		Sizes:                  sv.sizes,
+		Flags:                  sv.flags,
+		CTOs:                   sv.ctos,
+		PerSampleIVSize:        sv.perSampleIVSize,
+		IVs:                    sv.ivs,
+		GenBoxes:               genBoxes,
+		MdatPayload:            mdatPayload,
+	}
+	if sv.hasSubsamples {
+		eff.HasSubsamples = true
+		eff.SubsampleCounts = make([]uint16, len(sv.subCounts))
+		for i, c := range sv.subCounts {
+			if c > 0xFFFF {
+				return nil, fmt.Errorf("subsample count overflows 16 bits: %w", ErrBadSource)
+			}
+			eff.SubsampleCounts[i] = uint16(c)
+		}
+		eff.ClearBytes = make([]uint16, len(sv.clearBytes))
+		eff.ProtectedBytes = make([]uint32, len(sv.protBytes))
+		for i := range sv.clearBytes {
+			if sv.clearBytes[i] > 0xFFFF {
+				return nil, fmt.Errorf("bytes of clear data overflow 16 bits: %w", ErrBadSource)
+			}
+			if sv.protBytes[i] > 0xFFFFFFFF {
+				return nil, fmt.Errorf("bytes of protected data overflow 32 bits: %w", ErrBadSource)
+			}
+			eff.ClearBytes[i] = uint16(sv.clearBytes[i])
+			eff.ProtectedBytes[i] = uint32(sv.protBytes[i])
+		}
+	}
+	if err := validateEffective(eff); err != nil {
+		return nil, fmt.Errorf("source values inconsistent (%v): %w", err, ErrBadSource)
+	}
+	return eff, nil
+}
+
 func allEqualU32(v []uint32) bool {
 	for i := 1; i < len(v); i++ {
 		if v[i] != v[0] {

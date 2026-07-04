@@ -107,6 +107,15 @@ func TestVectorsGenAndCheck(t *testing.T) {
 	require.Contains(t, stdout.String(), "differs from codec-derived bytes")
 }
 
+func TestVersion(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	require.Zero(t, run([]string{"-version"}, &stdout, &stderr))
+	require.Regexp(t, `^locmaf v.+\n$`, stdout.String())
+	stdout.Reset()
+	require.Zero(t, run([]string{"--version"}, &stdout, &stderr))
+	require.Regexp(t, `^locmaf v`, stdout.String())
+}
+
 func TestUsageAndErrors(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	require.Equal(t, 2, run(nil, &stdout, &stderr))

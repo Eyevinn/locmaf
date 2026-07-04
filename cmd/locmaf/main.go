@@ -6,6 +6,7 @@
 //	locmaf align [-init init.mp4] [-report text|json] input.cmaf
 //	locmaf vectors gen [-out dir]
 //	locmaf vectors check [dir]
+//	locmaf -version
 //
 // Exit codes: 0 success, 1 findings (misalignment or corpus drift),
 // 2 usage or I/O error.
@@ -15,6 +16,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/Eyevinn/locmaf/internal"
 )
 
 // Subcommand and format names, shared with the tests.
@@ -42,6 +45,9 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runAlign(args[1:], stdout, stderr)
 	case cmdVectors:
 		return runVectors(args[1:], stdout, stderr)
+	case "-version", "--version", "version":
+		fmt.Fprintf(stdout, "locmaf %s\n", internal.GetVersion())
+		return 0
 	case "-h", "--help", "help":
 		usage(stdout)
 		return 0
@@ -68,5 +74,9 @@ Subcommands:
         Re-derive the corpus and byte-compare against disk.
 
 Exit codes: 0 success, 1 findings, 2 usage or I/O error.
+
+Options:
+  -version
+        Display version information and exit.
 `)
 }

@@ -8,3 +8,4 @@ public/
 
 # Local deploy script (scp target is environment-specific)
 update_site.sh
+out/

@@ -8,7 +8,7 @@ import (
 	"github.com/Eyevinn/mp4ff/mp4"
 )
 
-// maxSampleCount bounds trunSampleCount as a defence against
+// maxSampleCount bounds trunSampleCount as a defense against
 // allocation attacks; no real CMAF chunk approaches it.
 const maxSampleCount = 1 << 24
 

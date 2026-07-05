@@ -114,7 +114,7 @@ type propertyEntry struct {
 	payload []byte
 }
 
-// frameProperties serialises entries in ascending field-ID order with
+// frameProperties serializes entries in ascending field-ID order with
 // the parity-rule framing (scalars bare, odd IDs length-prefixed).
 func frameProperties(entries []propertyEntry) []byte {
 	sort.Slice(entries, func(i, j int) bool { return entries[i].id < entries[j].id })

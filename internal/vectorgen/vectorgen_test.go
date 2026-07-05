@@ -16,7 +16,7 @@ func TestGenerateAllCases(t *testing.T) {
 			require.NoError(t, err)
 			require.Contains(t, files, "manifest.json")
 			require.Contains(t, files, "init.mp4")
-			require.Contains(t, files, "objects/g000_o000.locobj")
+			require.Contains(t, files, "objects/g000_o000.locmafobj")
 		})
 	}
 }

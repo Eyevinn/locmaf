@@ -2,7 +2,7 @@
   "name": "uniform",
   "description": "audio-like uniform durations and sizes: ID 6 default size, empty steady-state deltas",
   "locmafVersion": "0.3",
-  "draftCommit": "3e71428",
+  "draftCommit": "6a2439a",
   "groups": 1,
   "objects": 3,
   "files": {
@@ -13,8 +13,8 @@
     "effective/g000_o001.json": "184d1f89428a6493d41b69a95e422b8f8f0c3a7a5fa2cbd44a9e9ea09ac173a9",
     "effective/g000_o002.json": "70a4816f273942fd5f5c4976e7399ab61f80ce69723a2b12f1341930536aa966",
     "init.mp4": "cf52ef17807b35cc5314a243584547cbccebad97f0a2dd5816e44797fe0d8e88",
-    "objects/g000_o000.locobj": "afd96ace40e50c35227c73a73eeda626e2f6ff030d1e59237e2dd2bb44c8775d",
-    "objects/g000_o001.locobj": "a3efad24660a1c2f5bdf41287785b10017b9df808bcb90be466d5fdb5854e470",
-    "objects/g000_o002.locobj": "3296f1029af2f5a0a34537aa7922cc46d0691d11d203466c299555db6ee17da0"
+    "objects/g000_o000.locmafobj": "afd96ace40e50c35227c73a73eeda626e2f6ff030d1e59237e2dd2bb44c8775d",
+    "objects/g000_o001.locmafobj": "a3efad24660a1c2f5bdf41287785b10017b9df808bcb90be466d5fdb5854e470",
+    "objects/g000_o002.locmafobj": "3296f1029af2f5a0a34537aa7922cc46d0691d11d203466c299555db6ee17da0"
   }
 }

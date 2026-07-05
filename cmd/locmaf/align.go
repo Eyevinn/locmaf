@@ -252,7 +252,7 @@ func fragmentGenBoxes(seg *mp4.MediaSegment, fragIdx int, frag *mp4.Fragment) ([
 	return gbs, nil
 }
 
-// toGenBox re-serialises a parsed box and strips the 8-byte header,
+// toGenBox re-serializes a parsed box and strips the 8-byte header,
 // yielding the genBox payload (for uuid boxes the usertype leads the
 // payload, as the draft requires).
 func toGenBox(b mp4.Box) (locmaf.GenBox, error) {

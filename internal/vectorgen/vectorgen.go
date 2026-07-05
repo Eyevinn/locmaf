@@ -171,7 +171,7 @@ func generateCase(c vectorCase) (map[string][]byte, error) {
 			}
 
 			stem := fmt.Sprintf("g%03d_o%03d", g, o)
-			files["objects/"+stem+".locobj"] = obj
+			files["objects/"+stem+".locmafobj"] = obj
 			framed = locmaf.AppendFramed(framed, obj)
 			objects++
 
@@ -213,8 +213,10 @@ func generateCase(c vectorCase) (map[string][]byte, error) {
 	return files, nil
 }
 
-// Generate writes the whole corpus under dir, one directory per case.
+// Generate writes the whole corpus under dir, one directory per case,
+// plus a top-level README.md derived from the same cases.
 func Generate(dir string) error {
+	var summaries []caseSummary
 	for _, c := range cases() {
 		files, err := generateCase(c)
 		if err != nil {
@@ -229,8 +231,12 @@ func Generate(dir string) error {
 				return err
 			}
 		}
+		summaries = append(summaries, summarize(c, files))
 	}
-	return nil
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, readmeName), corpusReadme(summaries), 0o644)
 }
 
 // Check re-derives every case from the codec and byte-compares against
@@ -238,6 +244,7 @@ func Generate(dir string) error {
 // code. It returns one message per divergence (empty means clean).
 func Check(dir string) ([]string, error) {
 	var problems []string
+	var summaries []caseSummary
 	seen := map[string]struct{}{}
 	for _, c := range cases() {
 		files, err := generateCase(c)
@@ -262,6 +269,17 @@ func Check(dir string) ([]string, error) {
 				problems = append(problems, fmt.Sprintf("%s: differs from codec-derived bytes", rel))
 			}
 		}
+		summaries = append(summaries, summarize(c, files))
+	}
+	// The top-level README is derived from the same cases and pinned too.
+	seen[readmeName] = struct{}{}
+	switch got, err := os.ReadFile(filepath.Join(dir, readmeName)); {
+	case os.IsNotExist(err):
+		problems = append(problems, fmt.Sprintf("%s: missing from corpus (regenerate with `locmaf vectors gen`)", readmeName))
+	case err != nil:
+		return nil, err
+	case !bytes.Equal(got, corpusReadme(summaries)):
+		problems = append(problems, fmt.Sprintf("%s: differs from codec-derived bytes", readmeName))
 	}
 	// Stale files: anything under a case directory the matrix no longer
 	// produces.

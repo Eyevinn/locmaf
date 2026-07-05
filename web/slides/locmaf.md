@@ -243,7 +243,7 @@ Otherwise durations drift ±1 tick, get sent every fragment, and the 2-byte stea
 
 ---
 
-# Catalog DRM signalling
+# Catalog DRM signaling
 
 CMSF carries the DRM description; LOCMAF doesn't replace it.
 

@@ -93,7 +93,7 @@ func TestVectorsGenAndCheck(t *testing.T) {
 	// Corrupt one vector: check must flag it and exit 1.
 	var victim string
 	require.NoError(t, filepath.Walk(dir, func(p string, info os.FileInfo, err error) error {
-		if err == nil && !info.IsDir() && strings.HasSuffix(p, ".locobj") && victim == "" {
+		if err == nil && !info.IsDir() && strings.HasSuffix(p, ".locmafobj") && victim == "" {
 			victim = p
 		}
 		return err

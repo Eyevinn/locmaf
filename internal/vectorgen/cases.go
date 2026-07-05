@@ -13,9 +13,10 @@ import (
 	"github.com/Eyevinn/mp4ff/mp4"
 )
 
-// draftCommit is the locmaf-id commit the corpus was generated against.
-// Bump it together with any wire- or canonical-affecting draft change.
-const draftCommit = "3e71428"
+// draftCommit is the locmaf-id commit the corpus was generated against
+// (the draft-einarsson-moq-locmaf-01 tag). Bump it together with any
+// wire- or canonical-affecting draft change.
+const draftCommit = "6a2439a"
 
 // chunkSrc is one source chunk of a group: either a moof + mdat pair
 // (with optional genBoxes and decode-equivalent alternate moofs), or a
@@ -486,7 +487,7 @@ func cases() []vectorCase {
 	}
 }
 
-// encodeInit serialises the init segment.
+// encodeInit serializes the init segment.
 func encodeInit(init *mp4.InitSegment) ([]byte, error) {
 	var buf bytes.Buffer
 	if err := init.Encode(&buf); err != nil {

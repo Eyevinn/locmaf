@@ -2,7 +2,7 @@
   "name": "single-sample",
   "description": "one sample per chunk: sizes never on the wire (P authoritative); ID 8 sync flags deleted via ID 27",
   "locmafVersion": "0.3",
-  "draftCommit": "3e71428",
+  "draftCommit": "6a2439a",
   "groups": 1,
   "objects": 4,
   "files": {
@@ -15,9 +15,9 @@
     "effective/g000_o002.json": "49eb4e1e574fc9932085060ab6c0c732be6a06fb1fe4240943e662edc2fe1af9",
     "effective/g000_o003.json": "05e23ac9feb340cbefa9a31888bdfa11468a095f03997e4c8d31eb384b6805d2",
     "init.mp4": "837edbacc52571ac324d828de79711a3336e95ccaaaf67dc2439823a10d76a03",
-    "objects/g000_o000.locobj": "210f3e7eb54a7cc3a2c1b530a08f69d791d187a2f2d6f9598194df1b310013de",
-    "objects/g000_o001.locobj": "f5f37c36e1b53bd8e2959669608eec2c8e74dce905b60a47853f3bb84a65ab84",
-    "objects/g000_o002.locobj": "0ab5d22790dee6d17719c7f039be3b4cbe395c51d9b4ac6cd42c21ceb24c1d38",
-    "objects/g000_o003.locobj": "4b192c95b9a24880866f0b0cc08a3f228442b672e6931cc8f5adfd2fcec36fdf"
+    "objects/g000_o000.locmafobj": "210f3e7eb54a7cc3a2c1b530a08f69d791d187a2f2d6f9598194df1b310013de",
+    "objects/g000_o001.locmafobj": "f5f37c36e1b53bd8e2959669608eec2c8e74dce905b60a47853f3bb84a65ab84",
+    "objects/g000_o002.locmafobj": "0ab5d22790dee6d17719c7f039be3b4cbe395c51d9b4ac6cd42c21ceb24c1d38",
+    "objects/g000_o003.locmafobj": "4b192c95b9a24880866f0b0cc08a3f228442b672e6931cc8f5adfd2fcec36fdf"
   }
 }

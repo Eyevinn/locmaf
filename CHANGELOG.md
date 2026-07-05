@@ -8,6 +8,31 @@ Each release notes which LOCMAF packaging version (`locmafVersion`) it implement
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-05
+
+Still implements LOCMAF packaging version `"0.3"` — this is an
+editorial retarget, not a packaging-version bump.
+
+### Changed
+
+- Retargeted the golden-vector corpus to the published Internet-Draft
+  `draft-einarsson-moq-locmaf-01` (`draftCommit 6a2439a`). The revision
+  is editorial only: no wire or canonical-encoding change, so every
+  reconstructed chunk and effective-value file is byte-identical to
+  0.1.0 and the manifests differ only in the recorded draft commit.
+- Normalized all prose to US English spelling (`serialize`, `defense`,
+  `signaling`) across Go comments and the web site/slides, mirroring
+  the draft's own spelling normalization.
+- Renamed the bare-object vector files `.locobj` → `.locmafobj`.
+- Expanded the README to reflect the repository's scope: the reference
+  codec together with the conformance vectors, golden files, and worked
+  examples.
+
+### Added
+
+- A generated `testdata/vectors/README.md`, emitted by `vectors gen`
+  and pinned by `vectors check`, documenting every case in the corpus.
+
 ## [0.1.0] - 2026-07-04
 
 Implements LOCMAF packaging version `"0.3"`.
@@ -67,4 +92,5 @@ Implements LOCMAF packaging version `"0.3"`.
 - Site and slides rewritten for wire v0.3 (element types, vi64,
   packaging framing, no IANA actions) and shortened.
 
+[0.1.1]: https://github.com/Eyevinn/locmaf/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Eyevinn/locmaf/releases/tag/v0.1.0

@@ -3,7 +3,7 @@
 //
 // Usage:
 //
-//	locmaf align [-init init.mp4] [-report text|json] [-canon-out path] input.cmaf
+//	locmaf align [-init init.mp4] [-report text|json] [-canon-out path] [-bytes] input.cmaf
 //	locmaf pack [-init init.mp4] [-no-init] [-o out.locmaf] input.cmaf
 //	locmaf dump [-init init.mp4] [-report text|json] input.locmaf
 //	locmaf verify [-init init.mp4] [-report text|json] [-decodable] input.locmaf
@@ -74,11 +74,12 @@ func usage(w io.Writer) {
 	fmt.Fprint(w, `locmaf — LOCMAF reference tooling
 
 Subcommands:
-  align [-init init.mp4] [-report text|json] [-canon-out path] input.cmaf
+  align [-init init.mp4] [-report text|json] [-canon-out path] [-bytes] input.cmaf
         Verify that canonical reconstruction straight from the source
         CMAF equals the encode→decode→reconstruct round trip,
-        byte-identically, per fragment. Reports how the canonical form
-        differs from the source bytes (expected normalizations).
+        byte-identically, per fragment. Explains, box and field at a
+        time, how the canonical form differs from the source (the
+        expected normalizations); -bytes adds the raw hex diff.
         With -canon-out, also write the canonical CMAF bytes to a file
         ("-" for stdout) — the input canonicalized — when every chunk
         aligns.

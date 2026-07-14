@@ -63,7 +63,7 @@ func TestAlignOnSynthesizedCMAF(t *testing.T) {
 	dir := t.TempDir()
 	path := writeTestCMAF(t, dir)
 
-	report, canon, err := alignFile(path, "", false)
+	report, canon, err := alignFile(path, "", false, false)
 	require.NoError(t, err)
 	require.Nil(t, canon)
 	require.Len(t, report.Chunks, 4)
@@ -97,7 +97,7 @@ func TestAlignCanonOut(t *testing.T) {
 
 	// The canonical file is a valid, self-contained CMAF file and it is
 	// already canonical: re-aligning it needs no further normalization.
-	report, _, err := alignFile(canonPath, "", false)
+	report, _, err := alignFile(canonPath, "", false, false)
 	require.NoError(t, err)
 	require.Len(t, report.Chunks, 4)
 	require.Zero(t, report.Diverged)
@@ -118,13 +118,49 @@ func TestAlignCanonOut(t *testing.T) {
 	require.Equal(t, first, second)
 }
 
+func TestAlignExplainsNormalizations(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTestCMAF(t, dir)
+
+	report, _, err := alignFile(path, "", false, false)
+	require.NoError(t, err)
+
+	var norms []string
+	for _, c := range report.Chunks {
+		if c.Aligned && !c.SourceIdentical {
+			norms = c.Normalizations
+			require.Nil(t, c.FirstDiff, "raw hex diff must be opt-in (-bytes)")
+			break
+		}
+	}
+	require.NotEmpty(t, norms, "expected a chunk with normalizations")
+	joined := strings.Join(norms, "\n")
+	require.Contains(t, joined, "moof/mfhd: sequence_number")
+	require.Contains(t, joined, "moof/traf/tfdt: version 0 → 1")
+	require.Contains(t, joined, "data_offset")
+	require.Contains(t, joined, "mdat: payload identical")
+
+	// -bytes adds the raw first-diff window.
+	withBytes, _, err := alignFile(path, "", false, true)
+	require.NoError(t, err)
+	var sawFirstDiff bool
+	for _, c := range withBytes.Chunks {
+		if c.Aligned && !c.SourceIdentical {
+			require.NotNil(t, c.FirstDiff)
+			sawFirstDiff = true
+			break
+		}
+	}
+	require.True(t, sawFirstDiff)
+}
+
 func TestPackRoundTripMatchesAlignCanonical(t *testing.T) {
 	dir := t.TempDir()
 	path := writeTestCMAF(t, dir)
 
 	// align's canonical output is the oracle: the init region followed by
 	// each chunk's canonical form.
-	_, wantCanon, err := alignFile(path, "", true)
+	_, wantCanon, err := alignFile(path, "", true, false)
 	require.NoError(t, err)
 	require.NotNil(t, wantCanon)
 

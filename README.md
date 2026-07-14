@@ -70,10 +70,11 @@ locmaf pack [-init init.mp4] [-no-init] [-o out.locmaf] input.cmaf
 
 Encodes a fragmented CMAF file into the self-framed `.locmaf` file
 format: a leading in-band rawBoxes init Object followed by one
-length-prefixed LOCMAF Object per chunk, with each CMAF segment mapped
-to a MOQT group (first chunk a full header, the rest delta). `-no-init`
-omits the init Object for bare media output (decoding then needs a
-separate init); output defaults to stdout.
+length-prefixed LOCMAF Object per chunk. The file is a single group —
+one delta chain, with a full header at the start and only re-anchoring
+on a timeline (BMDT) discontinuity; CMAF segment structure rides in the
+`styp` genBoxes. `-no-init` omits the init Object for bare media output
+(decoding then needs a separate init); output defaults to stdout.
 
 ### `dump` — inspect a `.locmaf`
 
@@ -83,6 +84,21 @@ locmaf dump [-init init.mp4] [-report text|json] input.locmaf
 
 Walks a `.locmaf` file and reports each Object — rawBoxes, full, or
 delta header — with its genBoxes, sample count, BMDT, and payload size.
+
+### `verify` — conformance-check a `.locmaf`
+
+```sh
+locmaf verify [-init init.mp4] [-report text|json] [-decodable] input.locmaf
+```
+
+Checks that a `.locmaf` file is a conformant LOCMAF stream — the
+wire-format analog of `align`. Per Object it runs the conformance
+ladder: it decodes, reconstructs a canonical CMAF chunk, and (unless
+`-decodable`) re-encodes that chunk and requires the result to be
+byte-identical to the wire Object, i.e. the Object is itself canonically
+encoded. `-decodable` relaxes the check to "decodes and reconstructs"
+for streams you do not require to be canonical. Exit `1` on any
+non-conformant Object.
 
 `vectors gen` / `vectors check` manage the conformance corpus; see
 below.

@@ -11,9 +11,11 @@ import (
 
 // runPack encodes a fragmented CMAF file as a self-contained .locmaf
 // file: a leading rawBoxes Object carrying the init (ftyp+moov) in-band,
-// then one length-prefixed LOCMAF Object per CMAF chunk. Each CMAF
-// segment is one MOQT group, so its first chunk carries a full header and
-// the rest carry delta headers.
+// then one length-prefixed LOCMAF Object per CMAF chunk. The file is a
+// single group (one delta chain): the first chunk carries a full header
+// and the rest delta headers, re-anchoring with a full header only at a
+// timeline (BMDT) discontinuity. CMAF segment structure is preserved by
+// the styp genBoxes, not by group boundaries.
 func runPack(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("pack", flag.ContinueOnError)
 	fs.SetOutput(stderr)
@@ -58,7 +60,9 @@ func runPack(args []string, stdout, stderr io.Writer) int {
 // input and returns it together with the number of Objects written. When
 // includeInit is set, the stream leads with a rawBoxes Object carrying
 // the init in-band; otherwise it holds bare media Objects and a decoder
-// must be given the init separately.
+// must be given the init separately. The whole media is one group: a
+// single running state chains deltas across every segment, so full
+// headers appear only at the start and at BMDT discontinuities.
 func packFile(lc *loadedCMAF, includeInit bool) ([]byte, int, error) {
 	state := locmaf.NewState()
 	var out []byte
@@ -73,7 +77,6 @@ func packFile(lc *loadedCMAF, includeInit bool) ([]byte, int, error) {
 	}
 
 	for s, seg := range lc.file.Segments {
-		state.Reset() // each CMAF segment is a new MOQT group
 		for o, frag := range seg.Fragments {
 			genBoxes, err := fragmentGenBoxes(seg, o, frag)
 			if err != nil {

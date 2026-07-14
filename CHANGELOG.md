@@ -15,6 +15,9 @@ Still implements LOCMAF packaging version `"0.3"`.
 - `locmaf pack` and `locmaf dump`: encode a fragmented CMAF file into
   the self-framed `.locmaf` file format, and inspect a `.locmaf` file
   Object by Object.
+- `locmaf verify`: check that a `.locmaf` file is a conformant LOCMAF
+  stream — every Object decodes, reconstructs, and is canonically
+  encoded.
 - `locmaf align -canon-out`: also emit the canonical CMAF bytes, so
   `align` can generate canonical reference files.
 

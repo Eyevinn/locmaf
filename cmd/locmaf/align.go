@@ -63,6 +63,7 @@ func runAlign(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	initPath := fs.String("init", "", "separate init segment (ftyp+moov) when the input carries none")
 	format := fs.String("report", formatText, "report format: text or json")
+	canonOut := fs.String("canon-out", "", "write the canonical CMAF bytes to this path (\"-\" for stdout); only when every chunk aligns")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -75,39 +76,68 @@ func runAlign(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 
-	report, err := alignFile(fs.Arg(0), *initPath)
+	report, canon, err := alignFile(fs.Arg(0), *initPath, *canonOut != "")
 	if err != nil {
 		fmt.Fprintf(stderr, "align: %v\n", err)
 		return 2
 	}
 
+	// When the canonical bytes go to stdout, keep the report off stdout so
+	// the binary and text streams do not interleave.
+	reportOut := stdout
+	if *canonOut == "-" {
+		reportOut = stderr
+	}
 	if *format == formatJSON {
-		enc := json.NewEncoder(stdout)
+		enc := json.NewEncoder(reportOut)
 		enc.SetIndent("", "  ")
 		if err := enc.Encode(report); err != nil {
 			fmt.Fprintf(stderr, "align: %v\n", err)
 			return 2
 		}
 	} else {
-		printTextReport(stdout, report)
+		printTextReport(reportOut, report)
 	}
+
+	if *canonOut != "" {
+		switch {
+		case report.Diverged > 0:
+			fmt.Fprintf(stderr, "align: not writing canonical output; %d chunk(s) diverged\n", report.Diverged)
+		case *canonOut == "-":
+			if _, err := stdout.Write(canon); err != nil {
+				fmt.Fprintf(stderr, "align: %v\n", err)
+				return 2
+			}
+		default:
+			if err := os.WriteFile(*canonOut, canon, 0o644); err != nil {
+				fmt.Fprintf(stderr, "align: %v\n", err)
+				return 2
+			}
+		}
+	}
+
 	if report.Diverged > 0 {
 		return 1
 	}
 	return 0
 }
 
-func alignFile(inputPath, initPath string) (*alignReport, error) {
+// alignFile verifies every fragment of inputPath. When collectCanon is
+// set and no chunk diverges, it also returns the canonical CMAF bytes:
+// the leading init/ftyp region unchanged, followed by each chunk's
+// canonical form — a byte-for-byte canonicalization of the input that
+// can be written out to generate reference files.
+func alignFile(inputPath, initPath string, collectCanon bool) (*alignReport, []byte, error) {
 	raw, err := os.ReadFile(inputPath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	f, err := mp4.DecodeFile(bytes.NewReader(raw))
 	if err != nil {
-		return nil, fmt.Errorf("parse %s: %w", inputPath, err)
+		return nil, nil, fmt.Errorf("parse %s: %w", inputPath, err)
 	}
 	if len(f.Segments) == 0 {
-		return nil, fmt.Errorf("%s: %w", inputPath, errNotFragmented)
+		return nil, nil, fmt.Errorf("%s: %w", inputPath, errNotFragmented)
 	}
 
 	moov := f.Moov
@@ -116,18 +146,18 @@ func alignFile(inputPath, initPath string) (*alignReport, error) {
 	}
 	if moov == nil {
 		if initPath == "" {
-			return nil, fmt.Errorf("%s: %w", inputPath, errNoInit)
+			return nil, nil, fmt.Errorf("%s: %w", inputPath, errNoInit)
 		}
 		ib, err := os.ReadFile(initPath)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		initFile, err := mp4.DecodeFile(bytes.NewReader(ib))
 		if err != nil {
-			return nil, fmt.Errorf("parse init %s: %w", initPath, err)
+			return nil, nil, fmt.Errorf("parse init %s: %w", initPath, err)
 		}
 		if initFile.Init == nil && initFile.Moov == nil {
-			return nil, fmt.Errorf("%s: %w", initPath, errNoMoov)
+			return nil, nil, fmt.Errorf("%s: %w", initPath, errNoMoov)
 		}
 		moov = initFile.Moov
 		if initFile.Init != nil {
@@ -137,6 +167,12 @@ func alignFile(inputPath, initPath string) (*alignReport, error) {
 
 	report := &alignReport{Input: inputPath}
 	starts := chunkStarts(f, uint64(len(raw)))
+	// Everything before the first chunk (inline ftyp+moov, if any) passes
+	// through unchanged; only the media chunks get canonicalized.
+	var canonFile []byte
+	if collectCanon {
+		canonFile = append(canonFile, raw[:starts[0]]...)
+	}
 	chunkIdx := 0
 	for g, seg := range f.Segments {
 		tx, rx := locmaf.NewState(), locmaf.NewState()
@@ -161,6 +197,9 @@ func alignFile(inputPath, initPath string) (*alignReport, error) {
 			res.Aligned = true
 			res.WireBytes = wire
 			report.Aligned++
+			if collectCanon {
+				canonFile = append(canonFile, canon...)
+			}
 
 			if bytes.Equal(src, canon) {
 				res.SourceIdentical = true
@@ -177,7 +216,10 @@ func alignFile(inputPath, initPath string) (*alignReport, error) {
 			report.Chunks = append(report.Chunks, res)
 		}
 	}
-	return report, nil
+	if !collectCanon || report.Diverged > 0 {
+		return report, nil, nil
+	}
+	return report, canonFile, nil
 }
 
 // alignFragment runs both paths for one fragment and asserts A == B:

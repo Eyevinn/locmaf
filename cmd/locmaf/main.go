@@ -3,7 +3,7 @@
 //
 // Usage:
 //
-//	locmaf align [-init init.mp4] [-report text|json] input.cmaf
+//	locmaf align [-init init.mp4] [-report text|json] [-canon-out path] input.cmaf
 //	locmaf vectors gen [-out dir]
 //	locmaf vectors check [dir]
 //	locmaf -version
@@ -62,11 +62,14 @@ func usage(w io.Writer) {
 	fmt.Fprint(w, `locmaf — LOCMAF reference tooling
 
 Subcommands:
-  align [-init init.mp4] [-report text|json] input.cmaf
+  align [-init init.mp4] [-report text|json] [-canon-out path] input.cmaf
         Verify that canonical reconstruction straight from the source
         CMAF equals the encode→decode→reconstruct round trip,
         byte-identically, per fragment. Reports how the canonical form
         differs from the source bytes (expected normalizations).
+        With -canon-out, also write the canonical CMAF bytes to a file
+        ("-" for stdout) — the input canonicalized — when every chunk
+        aligns.
   vectors gen [-out dir]
         Derive the golden-vector corpus from the codec (default
         testdata/vectors).

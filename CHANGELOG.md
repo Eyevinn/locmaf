@@ -8,6 +8,18 @@ Each release notes which LOCMAF packaging version (`locmafVersion`) it implement
 
 ## [Unreleased]
 
+Still implements LOCMAF packaging version `"0.3"`.
+
+### Added
+
+- `locmaf pack` and `locmaf dump`: encode a fragmented CMAF file into
+  the self-framed `.locmaf` file format, and inspect a `.locmaf` file
+  Object by Object.
+- `locmaf align -canon-out`: also emit the canonical CMAF bytes, so
+  `align` can generate canonical reference files.
+
+See the [README](README.md#command-line-tool) for the CLI reference.
+
 ## [0.1.1] - 2026-07-05
 
 Still implements LOCMAF packaging version `"0.3"` — this is an

@@ -6,6 +6,7 @@
 //	locmaf align [-init init.mp4] [-report text|json] [-canon-out path] input.cmaf
 //	locmaf pack [-init init.mp4] [-no-init] [-o out.locmaf] input.cmaf
 //	locmaf dump [-init init.mp4] [-report text|json] input.locmaf
+//	locmaf verify [-init init.mp4] [-report text|json] [-decodable] input.locmaf
 //	locmaf vectors gen [-out dir]
 //	locmaf vectors check [dir]
 //	locmaf -version
@@ -27,6 +28,7 @@ const (
 	cmdAlign   = "align"
 	cmdPack    = "pack"
 	cmdDump    = "dump"
+	cmdVerify  = "verify"
 	cmdVectors = "vectors"
 	cmdCheck   = "check"
 	cmdGen     = "gen"
@@ -51,6 +53,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runPack(args[1:], stdout, stderr)
 	case cmdDump:
 		return runDump(args[1:], stdout, stderr)
+	case cmdVerify:
+		return runVerify(args[1:], stdout, stderr)
 	case cmdVectors:
 		return runVectors(args[1:], stdout, stderr)
 	case "-version", "--version", "version":
@@ -87,6 +91,11 @@ Subcommands:
         Walk a .locmaf file and report each Object: rawBoxes, full, or
         delta header, with genBoxes, sample count, BMDT, and payload
         size.
+  verify [-init init.mp4] [-report text|json] [-decodable] input.locmaf
+        Check that a .locmaf file is conformant: every Object decodes
+        and reconstructs a canonical CMAF chunk, and (unless -decodable)
+        is itself canonical — the wire bytes match the canonical
+        re-encode. Exit 1 on any non-conformant Object.
   vectors gen [-out dir]
         Derive the golden-vector corpus from the codec (default
         testdata/vectors).

@@ -308,6 +308,26 @@ LOCMAF saves **more** relative to CMAF under DRM than on clear content — the e
 
 ---
 
+# Conformance & tooling
+
+Reference codec + CLI: [`Eyevinn/locmaf`][locmaf] (stdlib-only Go).
+
+- **`align`** — round-trip a CMAF file; explain, box and field at a time,
+  what the canonical form normalizes; optionally emit the canonical bytes
+- **`pack`** / **`dump`** — encode a CMAF file to the self-framed `.locmaf`
+  file, and inspect it Object by Object
+- **`verify`** — is a `.locmaf` stream conformant? it decodes, reconstructs,
+  and is itself canonically encoded
+- **`vectors`** — regenerate / byte-check the [golden-vector corpus][vectors]
+
+**Three-rung conformance ladder** other implementations test against:
+decode → effective values → byte-exact canonical chunk.
+
+[locmaf]: https://github.com/Eyevinn/locmaf
+[vectors]: https://github.com/Eyevinn/locmaf/tree/main/testdata/vectors
+
+---
+
 # Summary
 
 - **Per-fragment moof compression** is the contribution

@@ -128,45 +128,13 @@ func runAlign(args []string, stdout, stderr io.Writer) int {
 // canonical form — a byte-for-byte canonicalization of the input that
 // can be written out to generate reference files.
 func alignFile(inputPath, initPath string, collectCanon bool) (*alignReport, []byte, error) {
-	raw, err := os.ReadFile(inputPath)
+	lc, err := loadCMAF(inputPath, initPath)
 	if err != nil {
 		return nil, nil, err
 	}
-	f, err := mp4.DecodeFile(bytes.NewReader(raw))
-	if err != nil {
-		return nil, nil, fmt.Errorf("parse %s: %w", inputPath, err)
-	}
-	if len(f.Segments) == 0 {
-		return nil, nil, fmt.Errorf("%s: %w", inputPath, errNotFragmented)
-	}
-
-	moov := f.Moov
-	if f.Init != nil {
-		moov = f.Init.Moov
-	}
-	if moov == nil {
-		if initPath == "" {
-			return nil, nil, fmt.Errorf("%s: %w", inputPath, errNoInit)
-		}
-		ib, err := os.ReadFile(initPath)
-		if err != nil {
-			return nil, nil, err
-		}
-		initFile, err := mp4.DecodeFile(bytes.NewReader(ib))
-		if err != nil {
-			return nil, nil, fmt.Errorf("parse init %s: %w", initPath, err)
-		}
-		if initFile.Init == nil && initFile.Moov == nil {
-			return nil, nil, fmt.Errorf("%s: %w", initPath, errNoMoov)
-		}
-		moov = initFile.Moov
-		if initFile.Init != nil {
-			moov = initFile.Init.Moov
-		}
-	}
+	raw, f, moov, starts := lc.raw, lc.file, lc.moov, lc.starts
 
 	report := &alignReport{Input: inputPath}
-	starts := chunkStarts(f, uint64(len(raw)))
 	// Everything before the first chunk (inline ftyp+moov, if any) passes
 	// through unchanged; only the media chunks get canonicalized.
 	var canonFile []byte

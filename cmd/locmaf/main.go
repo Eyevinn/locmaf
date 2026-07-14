@@ -4,6 +4,8 @@
 // Usage:
 //
 //	locmaf align [-init init.mp4] [-report text|json] [-canon-out path] input.cmaf
+//	locmaf pack [-init init.mp4] [-no-init] [-o out.locmaf] input.cmaf
+//	locmaf dump [-init init.mp4] [-report text|json] input.locmaf
 //	locmaf vectors gen [-out dir]
 //	locmaf vectors check [dir]
 //	locmaf -version
@@ -23,6 +25,8 @@ import (
 // Subcommand and format names, shared with the tests.
 const (
 	cmdAlign   = "align"
+	cmdPack    = "pack"
+	cmdDump    = "dump"
 	cmdVectors = "vectors"
 	cmdCheck   = "check"
 	cmdGen     = "gen"
@@ -43,6 +47,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 	switch args[0] {
 	case cmdAlign:
 		return runAlign(args[1:], stdout, stderr)
+	case cmdPack:
+		return runPack(args[1:], stdout, stderr)
+	case cmdDump:
+		return runDump(args[1:], stdout, stderr)
 	case cmdVectors:
 		return runVectors(args[1:], stdout, stderr)
 	case "-version", "--version", "version":
@@ -70,6 +78,15 @@ Subcommands:
         With -canon-out, also write the canonical CMAF bytes to a file
         ("-" for stdout) — the input canonicalized — when every chunk
         aligns.
+  pack [-init init.mp4] [-no-init] [-o out.locmaf] input.cmaf
+        Encode a fragmented CMAF file as a self-contained .locmaf file:
+        a leading rawBoxes Object carrying the init in-band, then one
+        length-prefixed LOCMAF Object per chunk (default stdout). With
+        -no-init, omit the init Object (bare media; decode needs -init).
+  dump [-init init.mp4] [-report text|json] input.locmaf
+        Walk a .locmaf file and report each Object: rawBoxes, full, or
+        delta header, with genBoxes, sample count, BMDT, and payload
+        size.
   vectors gen [-out dir]
         Derive the golden-vector corpus from the codec (default
         testdata/vectors).

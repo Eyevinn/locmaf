@@ -29,7 +29,7 @@ carriage, BMDT re-anchoring, event-only chunks, and more.
 ```
 locmaf/          package locmaf — codec: EncodeCanonical, Decode, ReconstructCanonical
 ├── vi64/        MOQT vi64 varints + zigzag (stdlib-only)
-├── cmd/locmaf/  CLI: align, pack, dump, vectors (verify planned)
+├── cmd/locmaf/  CLI: align, pack, dump, verify, vectors
 ├── testdata/    golden canonical-encoding vectors (see testdata/vectors/README.md)
 └── web/         locmaf.dev site (separate stub module, not part of the Go module)
 ```
@@ -48,14 +48,20 @@ reconstruction (byte-exact moof rebuild including senc/saiz/saio).
 ### `align` — CMAF/LOCMAF round-trip conformance
 
 ```sh
-locmaf align [-init init.mp4] [-report text|json] [-canon-out path] input.cmaf
+locmaf align [-init init.mp4] [-report text|json] [-canon-out path] [-bytes] input.cmaf
 ```
 
 Per fragment, asserts that canonical reconstruction straight from the
 source moof equals the encode→decode→reconstruct round trip,
-byte-identically, and reports how the canonical form normalized the
-source bytes (a box-level diff plus a hex window at the first differing
-byte). With `-canon-out <path>` (`"-"` for stdout) it also writes the
+byte-identically. For a normalized fragment it explains, box and field
+at a time, how the canonical form differs from the source — e.g.
+`moof/mfhd: sequence_number 3 → 0 [SEQUENCE_ZEROED]`,
+`moof/traf/tfdt: version 0 → 1 [TFDT_WIDENED]`,
+`moof/traf/trun: per-sample sample_size list dropped [REDUNDANT_DROPPED]` —
+each tagged with its reason. (A raw byte diff would mislead here: the
+smaller canonical moof shifts everything after it, so `-bytes` adds the
+first-differing-byte hex window only on request.) With `-canon-out <path>`
+(`"-"` for stdout) it also writes the
 canonical CMAF — the input's init region unchanged followed by each
 chunk's canonical form — so `align` can generate canonical reference
 files, not just report differences. Those bytes are written only when

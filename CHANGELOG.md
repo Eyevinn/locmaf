@@ -21,6 +21,12 @@ Still implements LOCMAF packaging version `"0.3"`.
 - `locmaf align -canon-out`: also emit the canonical CMAF bytes, so
   `align` can generate canonical reference files.
 
+### Changed
+
+- `locmaf align` now explains normalizations at the box/field level
+  (e.g. `moof/traf/tfdt: version 0 → 1 [TFDT_WIDENED]`) instead of a
+  byte offset; the raw hex diff moved behind `-bytes`.
+
 See the [README](README.md#command-line-tool) for the CLI reference.
 
 ## [0.1.1] - 2026-07-05

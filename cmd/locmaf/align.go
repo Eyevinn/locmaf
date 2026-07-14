@@ -33,16 +33,21 @@ type chunkResult struct {
 	// SourceIdentical: the source chunk bytes already equal the
 	// canonical form (no normalization was needed).
 	SourceIdentical bool `json:"sourceIdentical"`
-	// Normalizations lists box-level differences between source and
-	// canonical bytes. With Aligned true these are expected
-	// normalizations (mfhd sequence, tfdt version, flag packing, box
-	// reorder, redundant defaults) — the effective values match by
+	// Normalizations explains, box and field at a time, how the canonical
+	// form differs from the source bytes. With Aligned true these are all
+	// expected normalizations (mfhd sequence zeroed, tfdt widened to 64
+	// bits, defaults folded, redundant per-sample lists dropped, box
+	// reorder, data_offset recomputed) — the effective values match by
 	// construction.
-	Normalizations []string   `json:"normalizations,omitempty"`
-	FirstDiff      *diffPoint `json:"firstDiff,omitempty"`
-	Error          string     `json:"error,omitempty"`
-	WireBytes      int        `json:"wireBytes"`
-	SourceBytes    int        `json:"sourceBytes"`
+	Normalizations []string `json:"normalizations,omitempty"`
+	// FirstDiff is the raw first-differing-byte window, populated only
+	// with -bytes. Byte offsets can mislead once a box size changes (the
+	// smaller canonical moof shifts everything after it), so it is
+	// opt-in; Normalizations is the box/field-level explanation.
+	FirstDiff   *diffPoint `json:"firstDiff,omitempty"`
+	Error       string     `json:"error,omitempty"`
+	WireBytes   int        `json:"wireBytes"`
+	SourceBytes int        `json:"sourceBytes"`
 }
 
 type diffPoint struct {
@@ -64,6 +69,7 @@ func runAlign(args []string, stdout, stderr io.Writer) int {
 	initPath := fs.String("init", "", "separate init segment (ftyp+moov) when the input carries none")
 	format := fs.String("report", formatText, "report format: text or json")
 	canonOut := fs.String("canon-out", "", "write the canonical CMAF bytes to this path (\"-\" for stdout); only when every chunk aligns")
+	bytesFlag := fs.Bool("bytes", false, "add the raw first-differing-byte hex window (offsets can mislead once box sizes change)")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -76,7 +82,7 @@ func runAlign(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 
-	report, canon, err := alignFile(fs.Arg(0), *initPath, *canonOut != "")
+	report, canon, err := alignFile(fs.Arg(0), *initPath, *canonOut != "", *bytesFlag)
 	if err != nil {
 		fmt.Fprintf(stderr, "align: %v\n", err)
 		return 2
@@ -127,7 +133,7 @@ func runAlign(args []string, stdout, stderr io.Writer) int {
 // the leading init/ftyp region unchanged, followed by each chunk's
 // canonical form — a byte-for-byte canonicalization of the input that
 // can be written out to generate reference files.
-func alignFile(inputPath, initPath string, collectCanon bool) (*alignReport, []byte, error) {
+func alignFile(inputPath, initPath string, collectCanon, wantBytes bool) (*alignReport, []byte, error) {
 	lc, err := loadCMAF(inputPath, initPath)
 	if err != nil {
 		return nil, nil, err
@@ -172,12 +178,14 @@ func alignFile(inputPath, initPath string, collectCanon bool) (*alignReport, []b
 			if bytes.Equal(src, canon) {
 				res.SourceIdentical = true
 			} else {
-				res.Normalizations = boxDiff(src, canon)
-				if off := firstDiff(src, canon); off >= 0 {
-					res.FirstDiff = &diffPoint{
-						Offset:    off,
-						SourceHex: hexWindow(src, off),
-						CanonHex:  hexWindow(canon, off),
+				res.Normalizations = describeNormalizations(src, canon, frag.Moof, moov)
+				if wantBytes {
+					if off := firstDiff(src, canon); off >= 0 {
+						res.FirstDiff = &diffPoint{
+							Offset:    off,
+							SourceHex: hexWindow(src, off),
+							CanonHex:  hexWindow(canon, off),
+						}
 					}
 				}
 			}

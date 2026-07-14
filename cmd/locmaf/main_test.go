@@ -58,8 +58,9 @@ func TestAlignOnSynthesizedCMAF(t *testing.T) {
 	dir := t.TempDir()
 	path := writeTestCMAF(t, dir)
 
-	report, err := alignFile(path, "")
+	report, canon, err := alignFile(path, "", false)
 	require.NoError(t, err)
+	require.Nil(t, canon)
 	require.Len(t, report.Chunks, 4)
 	require.Equal(t, 4, report.Aligned)
 	require.Zero(t, report.Diverged)
@@ -77,6 +78,39 @@ func TestAlignOnSynthesizedCMAF(t *testing.T) {
 	code = run([]string{cmdAlign, path}, &stdout, &stderr)
 	require.Zero(t, code)
 	require.Contains(t, stdout.String(), "4 aligned, 0 diverged")
+}
+
+func TestAlignCanonOut(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTestCMAF(t, dir)
+	canonPath := filepath.Join(dir, "canon.cmaf")
+
+	var stdout, stderr bytes.Buffer
+	code := run([]string{cmdAlign, "-canon-out", canonPath, path}, &stdout, &stderr)
+	require.Zero(t, code, "stderr: %s", stderr.String())
+	require.Contains(t, stdout.String(), "4 aligned, 0 diverged")
+
+	// The canonical file is a valid, self-contained CMAF file and it is
+	// already canonical: re-aligning it needs no further normalization.
+	report, _, err := alignFile(canonPath, "", false)
+	require.NoError(t, err)
+	require.Len(t, report.Chunks, 4)
+	require.Zero(t, report.Diverged)
+	for _, c := range report.Chunks {
+		require.True(t, c.SourceIdentical, "g%d o%d not canonical", c.Group, c.Object)
+	}
+
+	// Feeding it back through -canon-out is a fixed point.
+	canonPath2 := filepath.Join(dir, "canon2.cmaf")
+	stdout.Reset()
+	stderr.Reset()
+	code = run([]string{cmdAlign, "-canon-out", canonPath2, canonPath}, &stdout, &stderr)
+	require.Zero(t, code, "stderr: %s", stderr.String())
+	first, err := os.ReadFile(canonPath)
+	require.NoError(t, err)
+	second, err := os.ReadFile(canonPath2)
+	require.NoError(t, err)
+	require.Equal(t, first, second)
 }
 
 func TestVectorsGenAndCheck(t *testing.T) {

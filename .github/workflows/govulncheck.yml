@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       # Latest stable Go, not the module's own go directive: setup-go pins
       # GOTOOLCHAIN=local, so `go install` fails outright once golang.org/x/vuln

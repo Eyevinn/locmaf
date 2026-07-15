@@ -1,41 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"os"
 
-	"github.com/Eyevinn/locmaf"
-	"github.com/Eyevinn/mp4ff/mp4"
+	"github.com/Eyevinn/locmaf/conform"
 )
-
-// verifyObject is the conformance outcome for one Object of a .locmaf file.
-type verifyObject struct {
-	Index      int    `json:"index"`
-	WireBytes  int    `json:"wireBytes"`
-	Kind       string `json:"kind"`
-	Conformant bool   `json:"conformant"`
-	// Error is a rung 1/2 failure: the Object did not decode, or its
-	// effective values did not reconstruct a canonical chunk.
-	Error string `json:"error,omitempty"`
-	// CanonBytes and FirstDiff describe a rung 3 failure: the Object
-	// decodes and reconstructs but is not itself canonical — the
-	// canonical re-encode differs from the wire bytes.
-	CanonBytes int        `json:"canonBytes,omitempty"`
-	FirstDiff  *diffPoint `json:"firstDiff,omitempty"`
-}
-
-type verifyReport struct {
-	Input         string         `json:"input"`
-	Strict        bool           `json:"strict"`
-	NumObjects    int            `json:"numObjects"`
-	Conformant    int            `json:"conformantObjects"`
-	NonConformant int            `json:"nonConformantObjects"`
-	Objects       []verifyObject `json:"objects"`
-}
 
 func runVerify(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("verify", flag.ContinueOnError)
@@ -77,152 +50,28 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-// verifyFile walks the Objects of a .locmaf file and checks each against
-// the conformance ladder: it decodes (rung 1), reconstructs a canonical
-// CMAF chunk (rung 2), and — when strict — re-encodes that chunk and
-// requires the result to be byte-identical to the wire Object (rung 3,
-// the canonical-encoding conformance). A rawBoxes Object is carried
-// verbatim, so it is canonical by construction once it decodes.
-//
-// Two in-group states run in parallel: rx follows the wire (deltas as
-// received), tx follows the canonical re-encode. For a canonical stream
-// they stay in lockstep. A non-canonical Object is flagged where it
-// occurs; because delta headers chain, a later Object's verdict can be
-// affected by an earlier non-canonical one — the first failure is the
-// reliable signal.
-func verifyFile(inputPath, initPath string, strict bool) (*verifyReport, error) {
+// verifyFile reads a .locmaf file (and an optional separate init) and runs
+// the shared conformance check over its bytes.
+func verifyFile(inputPath, initPath string, strict bool) (*conform.VerifyReport, error) {
 	data, err := os.ReadFile(inputPath)
 	if err != nil {
 		return nil, err
 	}
-	objs, err := splitFramed(data)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", inputPath, err)
-	}
-
-	var moov *mp4.MoovBox
+	var initBytes []byte
 	if initPath != "" {
-		if moov, err = moovFromFile(initPath); err != nil {
+		if initBytes, err = os.ReadFile(initPath); err != nil {
 			return nil, err
 		}
 	}
-
-	report := &verifyReport{Input: inputPath, Strict: strict, NumObjects: len(objs)}
-	rx, tx := locmaf.NewState(), locmaf.NewState()
-	for i, obj := range objs {
-		rec := verifyObject{Index: i, WireBytes: len(obj)}
-		kind, kerr := headerKind(obj)
-		if kerr != nil {
-			rec.Error = kerr.Error()
-			report.NonConformant++
-			report.Objects = append(report.Objects, rec)
-			continue
-		}
-		rec.Kind = kind
-
-		if moov == nil {
-			// Resolve the moov from a leading in-band init rawBoxes.
-			if kind != kindRawBoxes {
-				return nil, fmt.Errorf("%s: object %d is a %s header but the file carries no in-band init: %w",
-					inputPath, i, kind, errNoInit)
-			}
-			content, cerr := rawBoxesContent(obj)
-			if cerr != nil {
-				rec.Error = cerr.Error()
-				report.NonConformant++
-				report.Objects = append(report.Objects, rec)
-				continue
-			}
-			m, merr := moovFromBytes(content)
-			if merr != nil {
-				rec.Error = fmt.Sprintf("leading rawBoxes is not a valid init: %v", merr)
-				report.NonConformant++
-				report.Objects = append(report.Objects, rec)
-				continue
-			}
-			moov = m
-			rec.Conformant = true // rawBoxes: carried verbatim, canonical by construction
-			report.Conformant++
-			report.Objects = append(report.Objects, rec)
-			continue
-		}
-
-		conf, canonObj, verr := verifyObjectAt(obj, rx, tx, moov, strict)
-		switch {
-		case verr != nil:
-			rec.Error = verr.Error()
-			report.NonConformant++
-		case conf:
-			rec.Conformant = true
-			report.Conformant++
-		default:
-			rec.CanonBytes = len(canonObj)
-			if off := firstDiff(obj, canonObj); off >= 0 {
-				rec.FirstDiff = &diffPoint{
-					Offset:    off,
-					SourceHex: hexWindow(obj, off),
-					CanonHex:  hexWindow(canonObj, off),
-				}
-			}
-			report.NonConformant++
-		}
-		report.Objects = append(report.Objects, rec)
+	report, err := conform.Verify(data, initBytes, strict)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", inputPath, err)
 	}
+	report.Input = inputPath
 	return report, nil
 }
 
-// verifyObjectAt runs one Object through the ladder, advancing the decode
-// state rx and (in strict mode) the encode state tx. It returns whether
-// the Object is conformant, the canonical re-encode (only when it differs
-// from the wire bytes), and any rung 1/2 error.
-func verifyObjectAt(obj []byte, rx, tx *locmaf.State, moov *mp4.MoovBox, strict bool) (bool, []byte, error) {
-	eff, raw, err := locmaf.Decode(obj, rx, moov)
-	if err != nil {
-		return false, nil, err
-	}
-	if raw != nil {
-		// A rawBoxes Object resets the in-group chain on both sides.
-		tx.Reset()
-		return true, nil, nil
-	}
-	chunk, err := locmaf.ReconstructCanonical(moov, eff)
-	if err != nil {
-		return false, nil, err
-	}
-	if !strict {
-		return true, nil, nil
-	}
-	// Re-encode from the decoded content. The genBoxes and mdat payload
-	// come straight from the decode (eff); only the moof needs to be
-	// recovered by parsing the canonical chunk.
-	moof, err := parseMoof(chunk)
-	if err != nil {
-		return false, nil, fmt.Errorf("re-parse canonical chunk: %w", err)
-	}
-	canonObj, err := locmaf.EncodeCanonical(eff.GenBoxes, moof, eff.MdatPayload, tx, moov)
-	if err != nil {
-		return false, nil, fmt.Errorf("canonical re-encode: %w", err)
-	}
-	if bytes.Equal(canonObj, obj) {
-		return true, nil, nil
-	}
-	return false, canonObj, nil
-}
-
-// parseMoof recovers the moof box from a reconstructed canonical CMAF
-// chunk (which may carry leading genBoxes and a trailing mdat).
-func parseMoof(chunk []byte) (*mp4.MoofBox, error) {
-	f, err := mp4.DecodeFile(bytes.NewReader(chunk))
-	if err != nil {
-		return nil, err
-	}
-	if len(f.Segments) == 0 || len(f.Segments[0].Fragments) == 0 {
-		return nil, fmt.Errorf("reconstructed chunk has no fragment: %w", locmaf.ErrMalformed)
-	}
-	return f.Segments[0].Fragments[0].Moof, nil
-}
-
-func printVerifyReport(w io.Writer, r *verifyReport) {
+func printVerifyReport(w io.Writer, r *conform.VerifyReport) {
 	mode := "strict: canonical"
 	if !r.Strict {
 		mode = "decodable"

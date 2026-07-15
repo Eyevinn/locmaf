@@ -12,6 +12,14 @@ Still implements LOCMAF packaging version `"0.3"`.
 
 ### Added
 
+- In-browser **conformance checker** at
+  [locmaf.dev/tools/](https://locmaf.dev/tools/): drop a `.locmaf` file to
+  verify it, or a fragmented CMAF file to round-trip (align) it — entirely
+  client-side via a WebAssembly build (`cmd/locmaf-wasm`), nothing uploaded.
+- `conform` package (`github.com/Eyevinn/locmaf/conform`): the
+  verify/dump/align conformance core as an importable, I/O-free library
+  (operates on byte slices and parsed boxes). The `locmaf` CLI and the
+  browser build are thin layers over it, so both give identical verdicts.
 - `locmaf pack` and `locmaf dump`: encode a fragmented CMAF file into
   the self-framed `.locmaf` file format, and inspect a `.locmaf` file
   Object by Object.

@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/Eyevinn/locmaf"
+	"github.com/Eyevinn/locmaf/conform"
 )
 
 // runPack encodes a fragmented CMAF file as a self-contained .locmaf
@@ -63,12 +64,12 @@ func runPack(args []string, stdout, stderr io.Writer) int {
 // must be given the init separately. The whole media is one group: a
 // single running state chains deltas across every segment, so full
 // headers appear only at the start and at BMDT discontinuities.
-func packFile(lc *loadedCMAF, includeInit bool) ([]byte, int, error) {
+func packFile(lc *conform.LoadedCMAF, includeInit bool) ([]byte, int, error) {
 	state := locmaf.NewState()
 	var out []byte
 	objects := 0
 	if includeInit {
-		initObj, err := locmaf.EncodeRaw(lc.initBytes, state)
+		initObj, err := locmaf.EncodeRaw(lc.InitBytes, state)
 		if err != nil {
 			return nil, 0, fmt.Errorf("encode init as rawBoxes: %w", err)
 		}
@@ -76,9 +77,9 @@ func packFile(lc *loadedCMAF, includeInit bool) ([]byte, int, error) {
 		objects = 1
 	}
 
-	for s, seg := range lc.file.Segments {
+	for s, seg := range lc.File.Segments {
 		for o, frag := range seg.Fragments {
-			genBoxes, err := fragmentGenBoxes(seg, o, frag)
+			genBoxes, err := conform.FragmentGenBoxes(seg, o, frag)
 			if err != nil {
 				return nil, 0, fmt.Errorf("segment %d chunk %d: %w", s, o, err)
 			}
@@ -86,7 +87,7 @@ func packFile(lc *loadedCMAF, includeInit bool) ([]byte, int, error) {
 			if frag.Mdat != nil {
 				payload = frag.Mdat.Data
 			}
-			obj, err := locmaf.EncodeCanonical(genBoxes, frag.Moof, payload, state, lc.moov)
+			obj, err := locmaf.EncodeCanonical(genBoxes, frag.Moof, payload, state, lc.Moov)
 			if err != nil {
 				return nil, 0, fmt.Errorf("segment %d chunk %d encode: %w", s, o, err)
 			}

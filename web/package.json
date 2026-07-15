@@ -7,11 +7,12 @@
   "scripts": {
     "dev": "marp --watch --server slides/",
     "preview": "node scripts/preview.mjs",
+    "build:wasm": "node scripts/build-wasm.mjs",
     "build:site": "node scripts/build-site.mjs",
     "build:slides:html": "marp --config-file .marprc.yml --html --output public/slides/index.html slides/locmaf.md",
     "build:slides:pdf": "marp --config-file .marprc.yml --pdf --allow-local-files --output public/slides/locmaf.pdf slides/locmaf.md",
     "build:slides:pptx": "marp --config-file .marprc.yml --pptx --allow-local-files --output public/slides/locmaf.pptx slides/locmaf.md",
-    "build": "npm run build:site && npm run build:slides:html",
+    "build": "npm run build:wasm && npm run build:site && npm run build:slides:html",
     "clean": "rm -rf public"
   },
   "devDependencies": {

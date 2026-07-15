@@ -13,11 +13,14 @@ The primary surface is the static landing page (`site/index.html`). The slide de
 ```sh
 npm install              # one-time
 npm run preview          # build + serve public/ on http://localhost:8000  (use PORT=9000 to override)
-npm run build            # site → public/, slides → public/slides/index.html
+npm run build            # build:wasm, then site → public/, slides → public/slides/index.html
+npm run build:wasm       # compile ../cmd/locmaf-wasm → site/tools/locmaf.wasm (+ wasm_exec.js)
 npm run dev              # MARP live-preview server for slides only (file index of slides/)
 npm run build:slides:pdf # also: :pptx
 npm run clean            # rm -rf public
 ```
+
+The tool page loads its WebAssembly with `fetch()`, so it must be **served over HTTP** — opening `site/tools/index.html` as a `file://` document fails (browsers block local `fetch`). Use `npm run preview` (or serve `public/`).
 
 Important: `build:slides:html` does **not** rebuild assets. After changing any SVG or anything under `assets/`, run the full `npm run build` (or `npm run preview`) — otherwise stale assets remain in `public/`. Browsers also cache SVGs aggressively; use a cache-busting query string or a fresh port when verifying changes locally.
 
@@ -26,14 +29,18 @@ Important: `build:slides:html` does **not** rebuild assets. After changing any S
 Sources live in three parallel trees; a build script stitches them into `public/`:
 
 ```
-site/      → copied verbatim to public/
+site/      → copied verbatim to public/  (includes tools/ — the conformance checker)
 slides/    → rendered by MARP using themes/locmaf.css → public/slides/index.html
 assets/    → copied to public/assets/, referenced by both site/ and slides/
 themes/    → MARP-only; consumed by .marprc.yml
-scripts/   → build-site.mjs and preview.mjs (Node, no deps)
+scripts/   → build-site.mjs, preview.mjs, build-wasm.mjs (Node, no deps)
 ```
 
 The two halves intentionally **share** `assets/` (logos and `assets/diagrams/*.svg`). Edit a diagram once and both surfaces update.
+
+### The `/tools/` conformance checker
+
+`site/tools/index.html` is an in-browser, client-side LOCMAF conformance checker: drop a `.locmaf` file (verify + dump) or a fragmented CMAF file (align round-trip) and it reports the result — entirely via WebAssembly, nothing uploaded. `scripts/build-wasm.mjs` compiles `../cmd/locmaf-wasm` (a `//go:build js && wasm` shim over the root module's `conform` package) to `site/tools/locmaf.wasm` and stages Go's `wasm_exec.js` beside it; both are generated artifacts, git-ignored via `site/tools/.gitignore`. `build-wasm` runs first in `npm run build`, so the artifacts land in `site/` and get copied to `public/` like any other static file. The checker and the `locmaf` CLI share `conform`, so they give identical verdicts.
 
 ### The MARP theme is a derivative of `../../ev-marp`
 

@@ -1,4 +1,4 @@
-package main
+package conform
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 )
 
 // describeNormalizations explains, box and field at a time, how the
-// canonical chunk differs from the source chunk. align only reaches this
+// canonical chunk differs from the source chunk. Align only reaches this
 // for an aligned chunk, so both sides decode to the same effective values
 // and every line is an expected LOCMAF normalization tagged with its
 // reason. A byte diff would be misleading here: the canonical moof is
@@ -16,7 +16,7 @@ import (
 // the byte-identical mdat) as different. If either side cannot be parsed
 // as a moof, it falls back to the coarse byte-level box diff.
 func describeNormalizations(src, canon []byte, srcMoof *mp4.MoofBox, moov *mp4.MoovBox) []string {
-	canonMoof, err := parseMoof(canon)
+	canonMoof, err := ParseMoof(canon)
 	if err != nil || srcMoof == nil || canonMoof == nil {
 		return boxDiff(src, canon)
 	}
@@ -30,6 +30,41 @@ func describeNormalizations(src, canon []byte, srcMoof *mp4.MoofBox, moov *mp4.M
 	if len(out) == 0 {
 		// Parsed clean but nothing named the difference; show something.
 		return boxDiff(src, canon)
+	}
+	return out
+}
+
+// boxDiff walks the top-level boxes of both byte strings and reports
+// per-box differences.
+func boxDiff(src, canon []byte) []string {
+	srcBoxes := walkBoxes(src)
+	canonBoxes := walkBoxes(canon)
+	var out []string
+	i, j := 0, 0
+	for i < len(srcBoxes) || j < len(canonBoxes) {
+		switch {
+		case i >= len(srcBoxes):
+			b := canonBoxes[j]
+			out = append(out, fmt.Sprintf("%s: only in canonical (%d bytes)", b.name, len(b.body)))
+			j++
+		case j >= len(canonBoxes):
+			b := srcBoxes[i]
+			out = append(out, fmt.Sprintf("%s: only in source (%d bytes)", b.name, len(b.body)))
+			i++
+		case srcBoxes[i].name != canonBoxes[j].name:
+			out = append(out, fmt.Sprintf("%s (source) vs %s (canonical): box order or presence differs",
+				srcBoxes[i].name, canonBoxes[j].name))
+			i++
+			j++
+		case !bytes.Equal(srcBoxes[i].body, canonBoxes[j].body):
+			out = append(out, fmt.Sprintf("%s: normalized (%d → %d bytes)",
+				srcBoxes[i].name, len(srcBoxes[i].body), len(canonBoxes[j].body)))
+			i++
+			j++
+		default:
+			i++
+			j++
+		}
 	}
 	return out
 }
@@ -195,7 +230,7 @@ func mdatNorm(src, canon []byte) []string {
 // added, dropped, or reordered). genBoxes are carried verbatim, so for an
 // aligned chunk this is normally empty.
 func topLevelNorms(src, canon []byte) []string {
-	so, co := boxTypeSeq(src), boxTypeSeq(canon)
+	so, co := BoxNames(src), BoxNames(canon)
 	if equalStrs(so, co) {
 		return nil
 	}
@@ -215,23 +250,6 @@ func childTypes(boxes []mp4.Box) []string {
 		types = append(types, b.Type())
 	}
 	return types
-}
-
-func boxTypeSeq(data []byte) []string {
-	var types []string
-	for _, b := range walkBoxes(data) {
-		types = append(types, b.name)
-	}
-	return types
-}
-
-func findBoxBody(data []byte, name string) []byte {
-	for _, b := range walkBoxes(data) {
-		if b.name == name {
-			return b.body
-		}
-	}
-	return nil
 }
 
 func equalStrs(a, b []string) bool {

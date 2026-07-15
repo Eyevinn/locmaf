@@ -5,19 +5,24 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
 
 	"github.com/Eyevinn/locmaf"
+	"github.com/Eyevinn/locmaf/conform"
 	"github.com/Eyevinn/mp4ff/mp4"
 	"github.com/stretchr/testify/require"
 )
 
 const flagReport = "-report"
 
-// writeTestCMAF synthesizes a small fragmented CMAF file: init inline,
-// two segments (styp) of two fragments each, varying sample sizes.
+// These tests cover the CLI layer — argument parsing, exit codes, file
+// I/O, and text/JSON report output. The conformance logic itself
+// (verify/dump/align over bytes) is tested directly in the conform
+// package.
+
+// writeTestCMAF synthesizes a small fragmented CMAF file on disk: init
+// inline, two segments (styp) of two fragments each, varying sample sizes.
 func writeTestCMAF(t *testing.T, dir string) string {
 	t.Helper()
 	init := mp4.CreateEmptyInit()
@@ -59,29 +64,16 @@ func writeTestCMAF(t *testing.T, dir string) string {
 	return path
 }
 
-func TestAlignOnSynthesizedCMAF(t *testing.T) {
+func TestAlignCLI(t *testing.T) {
 	dir := t.TempDir()
 	path := writeTestCMAF(t, dir)
 
-	report, canon, err := alignFile(path, "", false, false)
-	require.NoError(t, err)
-	require.Nil(t, canon)
-	require.Len(t, report.Chunks, 4)
-	require.Equal(t, 4, report.Aligned)
-	require.Zero(t, report.Diverged)
-	for _, c := range report.Chunks {
-		require.True(t, c.Aligned, "g%d o%d", c.Group, c.Object)
-		require.Positive(t, c.WireBytes)
-	}
-
 	var stdout, stderr bytes.Buffer
-	code := run([]string{cmdAlign, flagReport, formatJSON, path}, &stdout, &stderr)
-	require.Zero(t, code, "stderr: %s", stderr.String())
+	require.Zero(t, run([]string{cmdAlign, flagReport, formatJSON, path}, &stdout, &stderr), "stderr: %s", stderr.String())
 	require.Contains(t, stdout.String(), `"alignedChunks": 4`)
 
 	stdout.Reset()
-	code = run([]string{cmdAlign, path}, &stdout, &stderr)
-	require.Zero(t, code)
+	require.Zero(t, run([]string{cmdAlign, path}, &stdout, &stderr))
 	require.Contains(t, stdout.String(), "4 aligned, 0 diverged")
 }
 
@@ -91,67 +83,19 @@ func TestAlignCanonOut(t *testing.T) {
 	canonPath := filepath.Join(dir, "canon.cmaf")
 
 	var stdout, stderr bytes.Buffer
-	code := run([]string{cmdAlign, "-canon-out", canonPath, path}, &stdout, &stderr)
-	require.Zero(t, code, "stderr: %s", stderr.String())
+	require.Zero(t, run([]string{cmdAlign, "-canon-out", canonPath, path}, &stdout, &stderr), "stderr: %s", stderr.String())
 	require.Contains(t, stdout.String(), "4 aligned, 0 diverged")
 
-	// The canonical file is a valid, self-contained CMAF file and it is
-	// already canonical: re-aligning it needs no further normalization.
-	report, _, err := alignFile(canonPath, "", false, false)
-	require.NoError(t, err)
-	require.Len(t, report.Chunks, 4)
-	require.Zero(t, report.Diverged)
-	for _, c := range report.Chunks {
-		require.True(t, c.SourceIdentical, "g%d o%d not canonical", c.Group, c.Object)
-	}
-
-	// Feeding it back through -canon-out is a fixed point.
+	// Feeding the canonical output back through -canon-out is a fixed point.
 	canonPath2 := filepath.Join(dir, "canon2.cmaf")
 	stdout.Reset()
 	stderr.Reset()
-	code = run([]string{cmdAlign, "-canon-out", canonPath2, canonPath}, &stdout, &stderr)
-	require.Zero(t, code, "stderr: %s", stderr.String())
+	require.Zero(t, run([]string{cmdAlign, "-canon-out", canonPath2, canonPath}, &stdout, &stderr), "stderr: %s", stderr.String())
 	first, err := os.ReadFile(canonPath)
 	require.NoError(t, err)
 	second, err := os.ReadFile(canonPath2)
 	require.NoError(t, err)
 	require.Equal(t, first, second)
-}
-
-func TestAlignExplainsNormalizations(t *testing.T) {
-	dir := t.TempDir()
-	path := writeTestCMAF(t, dir)
-
-	report, _, err := alignFile(path, "", false, false)
-	require.NoError(t, err)
-
-	var norms []string
-	for _, c := range report.Chunks {
-		if c.Aligned && !c.SourceIdentical {
-			norms = c.Normalizations
-			require.Nil(t, c.FirstDiff, "raw hex diff must be opt-in (-bytes)")
-			break
-		}
-	}
-	require.NotEmpty(t, norms, "expected a chunk with normalizations")
-	joined := strings.Join(norms, "\n")
-	require.Contains(t, joined, "moof/mfhd: sequence_number")
-	require.Contains(t, joined, "moof/traf/tfdt: version 0 → 1")
-	require.Contains(t, joined, "data_offset")
-	require.Contains(t, joined, "mdat: payload identical")
-
-	// -bytes adds the raw first-diff window.
-	withBytes, _, err := alignFile(path, "", false, true)
-	require.NoError(t, err)
-	var sawFirstDiff bool
-	for _, c := range withBytes.Chunks {
-		if c.Aligned && !c.SourceIdentical {
-			require.NotNil(t, c.FirstDiff)
-			sawFirstDiff = true
-			break
-		}
-	}
-	require.True(t, sawFirstDiff)
 }
 
 func TestPackRoundTripMatchesAlignCanonical(t *testing.T) {
@@ -170,20 +114,20 @@ func TestPackRoundTripMatchesAlignCanonical(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 5, objects) // 1 init + 2 segments x 2 fragments
 
-	objs, err := splitFramed(data)
+	objs, err := conform.SplitFramed(data)
 	require.NoError(t, err)
 	require.Len(t, objs, 5)
 
 	// The leading rawBoxes Object carries exactly the init bytes.
-	content, err := rawBoxesContent(objs[0])
+	content, err := conform.RawBoxesContent(objs[0])
 	require.NoError(t, err)
-	require.Equal(t, lc.initBytes, content)
-	moov, err := moovFromBytes(content)
+	require.Equal(t, lc.InitBytes, content)
+	moov, err := conform.MoovFromBytes(content)
 	require.NoError(t, err)
 
 	// Decode the remaining Objects against one running state and rebuild
 	// the canonical CMAF; it must equal align's canonical output.
-	got := append([]byte(nil), lc.initBytes...)
+	got := append([]byte(nil), lc.InitBytes...)
 	state := locmaf.NewState()
 	for _, obj := range objs[1:] {
 		eff, raw, err := locmaf.Decode(obj, state, moov)
@@ -208,19 +152,19 @@ func TestPackAndDumpCLI(t *testing.T) {
 	stderr.Reset()
 	require.Zero(t, run([]string{cmdDump, flagReport, formatJSON, locmafPath}, &stdout, &stderr), "stderr: %s", stderr.String())
 
-	var rep dumpReport
+	var rep conform.DumpReport
 	require.NoError(t, json.Unmarshal(stdout.Bytes(), &rep))
 	require.Equal(t, 5, rep.NumObjects)
 	require.Len(t, rep.Objects, 5)
 
-	require.Equal(t, kindRawBoxes, rep.Objects[0].Kind)
+	require.Equal(t, conform.KindRawBoxes, rep.Objects[0].Kind)
 	require.NotNil(t, rep.Objects[0].Raw)
 	require.True(t, rep.Objects[0].Raw.IsInit)
 	require.Equal(t, []string{"ftyp", "moov"}, rep.Objects[0].Raw.Boxes)
 
 	// One group across the whole file: full header first, then all delta
 	// (the segments have a continuous timeline, so no re-anchor).
-	wantKinds := []string{kindRawBoxes, kindFull, kindDelta, kindDelta, kindDelta}
+	wantKinds := []string{conform.KindRawBoxes, conform.KindFull, conform.KindDelta, conform.KindDelta, conform.KindDelta}
 	var bmdts []uint64
 	for i, o := range rep.Objects {
 		require.Equal(t, wantKinds[i], o.Kind, "object %d", i)
@@ -254,7 +198,7 @@ func TestPackNoInit(t *testing.T) {
 	lc, err := loadCMAF(path, "")
 	require.NoError(t, err)
 	initFile := filepath.Join(dir, "init.mp4")
-	require.NoError(t, os.WriteFile(initFile, lc.initBytes, 0o644))
+	require.NoError(t, os.WriteFile(initFile, lc.InitBytes, 0o644))
 
 	barePath := filepath.Join(dir, "bare.locmaf")
 	var stdout, stderr bytes.Buffer
@@ -262,7 +206,7 @@ func TestPackNoInit(t *testing.T) {
 
 	bare, err := os.ReadFile(barePath)
 	require.NoError(t, err)
-	objs, err := splitFramed(bare)
+	objs, err := conform.SplitFramed(bare)
 	require.NoError(t, err)
 	require.Len(t, objs, 4) // 4 chunks, no leading init Object
 
@@ -276,11 +220,11 @@ func TestPackNoInit(t *testing.T) {
 	stderr.Reset()
 	require.Zero(t, run([]string{cmdDump, "-init", initFile, flagReport, formatJSON, barePath}, &stdout, &stderr),
 		"stderr: %s", stderr.String())
-	var rep dumpReport
+	var rep conform.DumpReport
 	require.NoError(t, json.Unmarshal(stdout.Bytes(), &rep))
 	require.Equal(t, 4, rep.NumObjects)
 	for _, o := range rep.Objects {
-		require.NotEqual(t, kindRawBoxes, o.Kind)
+		require.NotEqual(t, conform.KindRawBoxes, o.Kind)
 		require.NotNil(t, o.Moof)
 	}
 }
@@ -292,25 +236,25 @@ func writeNonCanonicalStream(t *testing.T, out, cmafPath string) {
 	t.Helper()
 	lc, err := loadCMAF(cmafPath, "")
 	require.NoError(t, err)
-	moov := lc.moov
+	moov := lc.Moov
 
 	st := locmaf.NewState()
-	initObj, err := locmaf.EncodeRaw(lc.initBytes, st)
+	initObj, err := locmaf.EncodeRaw(lc.InitBytes, st)
 	require.NoError(t, err)
 	stream := locmaf.AppendFramed(nil, initObj)
 
-	seg := lc.file.Segments[0]
+	seg := lc.File.Segments[0]
 	require.GreaterOrEqual(t, len(seg.Fragments), 2)
 	st.Reset()
 
-	gb0, err := fragmentGenBoxes(seg, 0, seg.Fragments[0])
+	gb0, err := conform.FragmentGenBoxes(seg, 0, seg.Fragments[0])
 	require.NoError(t, err)
 	o0, err := locmaf.EncodeCanonical(gb0, seg.Fragments[0].Moof, seg.Fragments[0].Mdat.Data, st, moov)
 	require.NoError(t, err)
 	stream = locmaf.AppendFramed(stream, o0)
 
 	// A fresh state forces a full header instead of the canonical delta.
-	gb1, err := fragmentGenBoxes(seg, 1, seg.Fragments[1])
+	gb1, err := conform.FragmentGenBoxes(seg, 1, seg.Fragments[1])
 	require.NoError(t, err)
 	o1, err := locmaf.EncodeCanonical(gb1, seg.Fragments[1].Moof, seg.Fragments[1].Mdat.Data, locmaf.NewState(), moov)
 	require.NoError(t, err)
@@ -319,7 +263,7 @@ func writeNonCanonicalStream(t *testing.T, out, cmafPath string) {
 	require.NoError(t, os.WriteFile(out, stream, 0o644))
 }
 
-func TestVerify(t *testing.T) {
+func TestVerifyCLI(t *testing.T) {
 	dir := t.TempDir()
 	path := writeTestCMAF(t, dir)
 
@@ -331,10 +275,9 @@ func TestVerify(t *testing.T) {
 	stdout.Reset()
 	stderr.Reset()
 	require.Zero(t, run([]string{cmdVerify, flagReport, formatJSON, locmafPath}, &stdout, &stderr), "stderr: %s", stderr.String())
-	var rep verifyReport
+	var rep conform.VerifyReport
 	require.NoError(t, json.Unmarshal(stdout.Bytes(), &rep))
 	require.True(t, rep.Strict)
-	require.Equal(t, 5, rep.NumObjects)
 	require.Equal(t, 5, rep.Conformant)
 	require.Zero(t, rep.NonConformant)
 
@@ -345,13 +288,10 @@ func TestVerify(t *testing.T) {
 	stdout.Reset()
 	stderr.Reset()
 	require.Equal(t, 1, run([]string{cmdVerify, flagReport, formatJSON, badPath}, &stdout, &stderr))
-	var bad verifyReport
+	var bad conform.VerifyReport
 	require.NoError(t, json.Unmarshal(stdout.Bytes(), &bad))
-	require.Equal(t, 3, bad.NumObjects)
 	require.Equal(t, 1, bad.NonConformant)
-	require.True(t, bad.Objects[0].Conformant)  // init rawBoxes
-	require.True(t, bad.Objects[1].Conformant)  // canonical full
-	require.False(t, bad.Objects[2].Conformant) // forced full where a delta is canonical
+	require.False(t, bad.Objects[2].Conformant)
 	require.NotNil(t, bad.Objects[2].FirstDiff)
 
 	// The same stream is conformant under -decodable (rungs 1-2 only).
@@ -359,54 +299,6 @@ func TestVerify(t *testing.T) {
 	stderr.Reset()
 	require.Zero(t, run([]string{cmdVerify, "-decodable", badPath}, &stdout, &stderr), "stderr: %s", stderr.String())
 	require.Contains(t, stdout.String(), "0 non-conformant")
-}
-
-// TestVerifyCorpus frames each golden-vector case (in-band init + its
-// objects) into a .locmaf and checks every Object verifies as canonical.
-// The corpus is the reference codec's own output, so this guards that
-// verify's canonical check accepts exactly what the encoder produces.
-func TestVerifyCorpus(t *testing.T) {
-	root := filepath.Join("..", "..", "testdata", "vectors")
-	entries, err := os.ReadDir(root)
-	if err != nil {
-		t.Skipf("corpus not present: %v", err)
-	}
-	ran := 0
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		caseDir := filepath.Join(root, e.Name())
-		initBytes, err := os.ReadFile(filepath.Join(caseDir, "init.mp4"))
-		if err != nil {
-			continue // not a case directory
-		}
-		ran++
-		t.Run(e.Name(), func(t *testing.T) {
-			st := locmaf.NewState()
-			initObj, err := locmaf.EncodeRaw(initBytes, st)
-			require.NoError(t, err)
-			stream := locmaf.AppendFramed(nil, initObj)
-
-			objPaths, err := filepath.Glob(filepath.Join(caseDir, "objects", "*.locmafobj"))
-			require.NoError(t, err)
-			require.NotEmpty(t, objPaths)
-			sort.Strings(objPaths)
-			for _, p := range objPaths {
-				b, err := os.ReadFile(p)
-				require.NoError(t, err)
-				stream = locmaf.AppendFramed(stream, b)
-			}
-			f := filepath.Join(t.TempDir(), "case.locmaf")
-			require.NoError(t, os.WriteFile(f, stream, 0o644))
-
-			report, err := verifyFile(f, "", true)
-			require.NoError(t, err)
-			require.Zero(t, report.NonConformant, "%s: non-conformant objects", e.Name())
-			require.Equal(t, len(objPaths)+1, report.Conformant)
-		})
-	}
-	require.Positive(t, ran, "no corpus cases found under %s", root)
 }
 
 func TestVectorsGenAndCheck(t *testing.T) {

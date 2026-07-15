@@ -319,12 +319,15 @@ Reference codec + CLI: [`Eyevinn/locmaf`][locmaf] (stdlib-only Go).
 - **`verify`** — is a `.locmaf` stream conformant? it decodes, reconstructs,
   and is itself canonically encoded
 - **`vectors`** — regenerate / byte-check the [golden-vector corpus][vectors]
+- **Browser checker** — the same `conform` core, in the browser via
+  WebAssembly: drop a file at [locmaf.dev/tools][tools], client-side
 
 **Three-rung conformance ladder** other implementations test against:
 decode → effective values → byte-exact canonical chunk.
 
 [locmaf]: https://github.com/Eyevinn/locmaf
 [vectors]: https://github.com/Eyevinn/locmaf/tree/main/testdata/vectors
+[tools]: https://locmaf.dev/tools/
 
 ---
 

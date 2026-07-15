@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="color-scheme" content="dark"/>
+<title>LOCMAF conformance checker</title>
+<meta name="description" content="Check LOCMAF conformance in your browser. Drop a .locmaf file or a fragmented CMAF file — everything runs client-side via WebAssembly; the file never leaves your machine."/>
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg"/>
+<link rel="stylesheet" href="../styles.css"/>
+<meta name="theme-color" content="#0e0e0e"/>
+<style>
+  .tool-main { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+  .lead { color: var(--text-muted); max-width: 720px; margin: 0 0 28px; }
+  .lead strong { color: var(--text); }
+
+  /* Keep the file input in the layout (clipped, not display:none) so the
+     native picker opens across browsers — Safari and Firefox refuse to
+     open a dialog for a display:none/hidden input, even via a <label>. */
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0; border: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .dropzone {
+    display: block;
+    border: 2px dashed var(--border);
+    border-radius: 14px;
+    padding: 44px 24px;
+    text-align: center;
+    background: var(--bg-card);
+    cursor: pointer;
+    transition: border-color 120ms ease, background 120ms ease;
+  }
+  .dropzone:hover, .dropzone.drag {
+    border-color: var(--eyevinn-cyan);
+    background: #232323;
+  }
+  .dropzone .big-label {
+    font-family: 'LevelOne', var(--sans);
+    font-size: 1.3rem;
+    color: #fff;
+    letter-spacing: 0.5px;
+  }
+  .dropzone .hint { color: var(--text-muted); font-size: 0.92rem; margin-top: 8px; }
+  .dropzone .filename { color: var(--eyevinn-cyan); font-family: var(--mono); font-size: 0.9rem; margin-top: 10px; }
+
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 20px 28px; align-items: center;
+    margin: 18px 0 6px; font-size: 0.92rem; color: var(--text-muted);
+  }
+  .controls label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+  .controls .init-file { color: var(--eyevinn-cyan); font-family: var(--mono); }
+  .status { font-family: var(--mono); font-size: 0.85rem; color: var(--text-muted); margin-top: 10px; min-height: 1.2em; }
+  .status .ok { color: var(--eyevinn-cyan); }
+  .status .err { color: var(--eyevinn-red); }
+
+  .verdict {
+    display: flex; align-items: center; gap: 14px;
+    border-radius: 12px; padding: 18px 22px; margin: 28px 0 20px;
+    font-family: 'LevelOne', var(--sans); font-size: 1.35rem; letter-spacing: 0.5px;
+  }
+  .verdict .icon { font-size: 1.6rem; line-height: 1; }
+  .verdict.pass { background: rgba(51,170,85,0.14); border: 1px solid #33aa55; color: #7ede9c; }
+  .verdict.fail { background: rgba(221,81,81,0.14); border: 1px solid var(--eyevinn-red); color: #f2a0a0; }
+  .verdict .mode-tag {
+    margin-left: auto; font-family: var(--mono); font-size: 0.7rem; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--text-muted); border: 1px solid var(--border);
+    border-radius: 999px; padding: 4px 12px;
+  }
+
+  .status-pill {
+    font-family: var(--mono); font-size: 0.78rem; padding: 2px 9px; border-radius: 999px;
+    white-space: nowrap;
+  }
+  .status-pill.ok  { background: rgba(51,170,85,0.16); color: #7ede9c; border: 1px solid #33aa55; }
+  .status-pill.bad { background: rgba(221,81,81,0.16); color: #f2a0a0; border: 1px solid var(--eyevinn-red); }
+  .kind-tag { font-family: var(--mono); color: var(--eyevinn-cyan); }
+  .norm-list { margin: 6px 0 0; padding-left: 1.1em; color: var(--text-muted); font-size: 0.82rem; }
+  .norm-list li { margin-bottom: 2px; }
+  .hex { font-family: var(--mono); font-size: 0.78rem; color: var(--text-muted); white-space: pre; }
+  .muted { color: var(--text-muted); }
+  h3.section { margin: 34px 0 10px; }
+  td.num, th.num { text-align: right; }
+  table.results td { vertical-align: top; }
+  .backlink { display: inline-block; margin-bottom: 6px; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+
+<div class="topnav">
+  <div class="topnav-inner">
+    <a class="brand" href="../" aria-label="LOCMAF home">
+      <img src="../assets/wordmark-dark.svg" alt="LOCMAF"/>
+    </a>
+    <div class="topnav-right">
+      <nav>
+        <a href="../#how">How it works</a>
+        <a href="../#wire">Packaging</a>
+        <a href="../#resources">Resources</a>
+      </nav>
+      <a class="eyevinn-cobrand" href="https://www.eyevinn.se" rel="noopener" aria-label="Eyevinn Technology">
+        <img src="../assets/eyevinn-logo.png" alt="Eyevinn Technology"/>
+      </a>
+    </div>
+  </div>
+</div>
+
+<main class="tool-main">
+  <a class="backlink" href="../">← locmaf.dev</a>
+  <h2>Conformance checker</h2>
+  <p class="lead">
+    Check a <strong>.locmaf</strong> file for conformance, or round-trip a fragmented
+    <strong>CMAF</strong> file through LOCMAF to see it reconstruct byte-identically.
+    Everything runs in your browser via WebAssembly — <strong>the file never leaves your machine</strong>,
+    nothing is uploaded.
+  </p>
+
+  <div class="dropzone" id="drop" role="button" tabindex="0" aria-label="Choose a file to check">
+    <div class="big-label">Drop a file here, or click to choose</div>
+    <div class="hint">A <code>.locmaf</code> file (verify + inspect) or a fragmented <code>.cmaf</code> / <code>.mp4</code> file (align round-trip)</div>
+    <div class="filename" id="filename"></div>
+  </div>
+  <input type="file" id="file" class="visually-hidden"/>
+
+  <div class="controls">
+    <label title="Strict requires each Object to be canonically encoded (the reference re-encode is byte-identical). Off checks only that each Object decodes and reconstructs.">
+      <input type="checkbox" id="strict" checked/> Strict (canonical) verify
+    </label>
+    <label>
+      Optional init segment (for bare media):
+      <input type="file" id="init" class="init-file"/>
+    </label>
+  </div>
+  <div class="status" id="status">Loading WebAssembly…</div>
+
+  <div id="results"></div>
+</main>
+
+<script src="./wasm_exec.js"></script>
+<script>
+(() => {
+  const statusEl = document.getElementById("status");
+  const resultsEl = document.getElementById("results");
+  const dropEl = document.getElementById("drop");
+  const fileEl = document.getElementById("file");
+  const initEl = document.getElementById("init");
+  const strictEl = document.getElementById("strict");
+  const filenameEl = document.getElementById("filename");
+
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+  ));
+
+  let wasmReady = false;
+  let wasmError = "";
+
+  const readBytes = (file) => new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(new Uint8Array(r.result));
+    r.onerror = () => reject(r.error);
+    r.readAsArrayBuffer(file);
+  });
+
+  async function run(file) {
+    if (!file) return;
+    if (!wasmReady) {
+      statusEl.innerHTML = wasmError
+        ? `<span class="err">${esc(wasmError)}</span>`
+        : `WebAssembly is still loading — try again in a moment.`;
+      return;
+    }
+    filenameEl.textContent = `${file.name} — ${file.size.toLocaleString()} bytes`;
+    resultsEl.innerHTML = "";
+    statusEl.innerHTML = "Analyzing…";
+    try {
+      const data = await readBytes(file);
+      let init = null;
+      if (initEl.files[0]) init = await readBytes(initEl.files[0]);
+      const res = JSON.parse(globalThis.locmafInspect(data, init, strictEl.checked));
+      if (!res.ok) {
+        statusEl.innerHTML = `<span class="err">${esc(res.error)}</span>`;
+        return;
+      }
+      statusEl.innerHTML = `<span class="ok">Done.</span>`;
+      render(res.result);
+    } catch (e) {
+      statusEl.innerHTML = `<span class="err">${esc(e.message || e)}</span>`;
+    }
+  }
+
+  // Wire the UI synchronously and independently of the WebAssembly load, so
+  // the picker always opens. The input is visually hidden but rendered, so
+  // input.click() opens the native dialog in every browser (a display:none
+  // input does not — that failed silently before). run() reports if wasm
+  // is not ready yet instead of doing nothing.
+  dropEl.addEventListener("click", () => fileEl.click());
+  dropEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileEl.click(); }
+  });
+  fileEl.addEventListener("change", () => run(fileEl.files[0]));
+  ["dragenter", "dragover"].forEach((ev) => dropEl.addEventListener(ev, (e) => {
+    e.preventDefault(); dropEl.classList.add("drag");
+  }));
+  ["dragleave", "drop"].forEach((ev) => dropEl.addEventListener(ev, (e) => {
+    e.preventDefault(); dropEl.classList.remove("drag");
+  }));
+  dropEl.addEventListener("drop", (e) => run(e.dataTransfer.files[0]));
+  strictEl.addEventListener("change", () => { if (fileEl.files[0]) run(fileEl.files[0]); });
+  initEl.addEventListener("change", () => {
+    if (fileEl.files[0]) run(fileEl.files[0]);
+    else statusEl.innerHTML = `<span class="ok">Init staged.</span> Now choose a media or .locmaf file above.`;
+  });
+
+  // Load the WebAssembly module. The UI already works; this enables analysis
+  // and surfaces any load failure (e.g. opened from file:// instead of a
+  // server, or a stale build missing locmaf.wasm) in the status line.
+  (async () => {
+    try {
+      if (typeof Go !== "function") throw new Error("wasm_exec.js did not load");
+      const go = new Go();
+      const bytes = await fetch("./locmaf.wasm", { cache: "no-store" }).then((r) => {
+        if (!r.ok) throw new Error(`fetch locmaf.wasm: HTTP ${r.status}`);
+        return r.arrayBuffer();
+      });
+      const { instance } = await WebAssembly.instantiate(bytes, go.importObject);
+      go.run(instance); // never resolves (main blocks); functions register synchronously
+      if (typeof globalThis.locmafInspect !== "function") throw new Error("wasm did not export locmafInspect");
+      wasmReady = true;
+      statusEl.innerHTML = `<span class="ok">Ready.</span> locmaf packaging v${esc(globalThis.locmafVersion)} · build ${esc(globalThis.locmafBuild)}`;
+    } catch (e) {
+      wasmError = "Failed to load WebAssembly: " + (e.message || e);
+      statusEl.innerHTML = `<span class="err">${esc(wasmError)}</span>`;
+    }
+  })();
+
+  // --- rendering ---
+  function render(result) {
+    if (result.mode === "align") return renderAlign(result.align);
+    return renderLocmaf(result.verify, result.dump);
+  }
+
+  function verdict(pass, text, mode) {
+    return `<div class="verdict ${pass ? "pass" : "fail"}">
+      <span class="icon">${pass ? "✓" : "✕"}</span>
+      <span>${esc(text)}</span>
+      <span class="mode-tag">${esc(mode)}</span>
+    </div>`;
+  }
+
+  function statCards(cards) {
+    return `<div class="grid">` + cards.map((c) => `
+      <div class="card">
+        <div class="sub">${esc(c.label)}</div>
+        <div class="big ${c.cyan ? "cyan" : ""}">${esc(c.value)}</div>
+        ${c.sub ? `<div class="sub">${esc(c.sub)}</div>` : ""}
+      </div>`).join("") + `</div>`;
+  }
+
+  function renderAlign(a) {
+    const pass = a.divergedChunks === 0;
+    const ratio = a.wireHeaderBytes > 0 ? (a.sourceMoofBytes / a.wireHeaderBytes) : 0;
+    let html = verdict(
+      pass,
+      pass ? `All ${a.alignedChunks} chunk(s) round-trip byte-identically` : `${a.divergedChunks} chunk(s) diverged`,
+      "CMAF → LOCMAF align"
+    );
+    html += statCards([
+      { label: "CMAF moof total", value: a.sourceMoofBytes.toLocaleString() + " B", sub: `${a.mediaSegments} segment(s), ${a.chunks.length} chunk(s)` },
+      { label: "LOCMAF header total", value: a.wireHeaderBytes.toLocaleString() + " B", cyan: true, sub: "moof headers on the wire (mdat excluded)" },
+      { label: "moof compression", value: ratio ? ratio.toFixed(1) + " : 1" : "—", cyan: true, sub: "header bytes, source vs wire" },
+    ]);
+    html += `<h3 class="section">Per-chunk</h3>`;
+    html += `<table class="results"><thead><tr>
+      <th class="num">group</th><th class="num">object</th><th class="num">source moof</th><th class="num">LOCMAF header</th><th>status</th></tr></thead><tbody>`;
+    for (const c of a.chunks) {
+      let status;
+      if (c.error) status = `<span class="status-pill bad">diverged</span> <span class="muted">${esc(c.error)}</span>`;
+      else if (c.sourceIdentical) status = `<span class="status-pill ok">aligned</span> <span class="muted">source already canonical</span>`;
+      else {
+        const norms = (c.normalizations || []).map((n) => `<li>${esc(n)}</li>`).join("");
+        status = `<span class="status-pill ok">aligned</span>` + (norms ? `<ul class="norm-list">${norms}</ul>` : "");
+      }
+      html += `<tr><td class="num">${c.group}</td><td class="num">${c.object}</td>
+        <td class="num">${c.sourceMoofBytes ? c.sourceMoofBytes.toLocaleString() : "—"} B</td>
+        <td class="num">${c.wireHeaderBytes ? c.wireHeaderBytes.toLocaleString() : "—"} B</td>
+        <td>${status}</td></tr>`;
+    }
+    html += `</tbody></table>`;
+    resultsEl.innerHTML = html;
+  }
+
+  function renderLocmaf(v, d) {
+    const pass = v.nonConformantObjects === 0;
+    const mode = v.strict ? "verify · strict canonical" : "verify · decodable";
+    let html = verdict(
+      pass,
+      pass ? `All ${v.conformantObjects} Object(s) conformant` : `${v.nonConformantObjects} of ${v.numObjects} Object(s) non-conformant`,
+      mode
+    );
+    // Merge verify status with dump summary, keyed by index.
+    const dumpByIdx = {};
+    if (d && d.objects) for (const o of d.objects) dumpByIdx[o.index] = o;
+
+    html += `<table class="results"><thead><tr>
+      <th class="num">#</th><th>kind</th><th class="num">wire</th><th>status</th><th>contents</th></tr></thead><tbody>`;
+    for (const o of v.objects) {
+      let status, contents = "";
+      if (o.error) status = `<span class="status-pill bad">error</span> <span class="muted">${esc(o.error)}</span>`;
+      else if (o.conformant) status = `<span class="status-pill ok">ok</span>`;
+      else {
+        status = `<span class="status-pill bad">not canonical</span> <span class="muted">${o.wireBytes} wire vs ${o.canonBytes} canonical B</span>`;
+        if (o.firstDiff) status += `<div class="hex">wire  ${esc(o.firstDiff.sourceHex)}\ncanon ${esc(o.firstDiff.canonHex)}</div>`;
+      }
+      const dd = dumpByIdx[o.index];
+      if (dd) {
+        if (dd.rawBoxes) contents = `<span class="muted">${esc((dd.rawBoxes.boxes || []).join(", "))}${dd.rawBoxes.isInit ? " (init)" : ""}</span>`;
+        else if (dd.moof) {
+          const gb = (dd.moof.genBoxes || []).length ? ` · genBoxes: ${esc(dd.moof.genBoxes.join(", "))}` : "";
+          contents = `<span class="muted">${dd.moof.sampleCount} sample(s), bmdt=${dd.moof.bmdt}, ${dd.moof.payloadBytes.toLocaleString()} payload B${gb}</span>`;
+        }
+      }
+      html += `<tr><td class="num">${o.index}</td><td><span class="kind-tag">${esc(o.kind)}</span></td>
+        <td class="num">${o.wireBytes.toLocaleString()}</td><td>${status}</td><td>${contents}</td></tr>`;
+    }
+    html += `</tbody></table>`;
+    resultsEl.innerHTML = html;
+  }
+})();
+</script>
+</body>
+</html>

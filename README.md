@@ -22,16 +22,19 @@ carriage, BMDT re-anchoring, event-only chunks, and more.
 - Specification: [draft-einarsson-moq-locmaf](https://datatracker.ietf.org/doc/draft-einarsson-moq-locmaf/)
   (source: [Eyevinn/locmaf-id](https://github.com/Eyevinn/locmaf-id))
 - Explainer site and slides: <https://locmaf.dev> (source in [`web/`](web/))
+- In-browser conformance checker: <https://locmaf.dev/tools/> — client-side, nothing uploaded
 - Packaging version: `locmafVersion "0.3"`
 
 ## Layout
 
 ```
-locmaf/          package locmaf — codec: EncodeCanonical, Decode, ReconstructCanonical
-├── vi64/        MOQT vi64 varints + zigzag (stdlib-only)
-├── cmd/locmaf/  CLI: align, pack, dump, verify, vectors
-├── testdata/    golden canonical-encoding vectors (see testdata/vectors/README.md)
-└── web/         locmaf.dev site (separate stub module, not part of the Go module)
+locmaf/              package locmaf — codec: EncodeCanonical, Decode, ReconstructCanonical
+├── vi64/            MOQT vi64 varints + zigzag (stdlib-only)
+├── conform/         shared verify/dump/align conformance core (I/O-free; used by the CLI and the wasm build)
+├── cmd/locmaf/      CLI: align, pack, dump, verify, vectors
+├── cmd/locmaf-wasm/ browser (js/wasm) build of the conformance checker
+├── testdata/        golden canonical-encoding vectors (see testdata/vectors/README.md)
+└── web/             locmaf.dev site + /tools/ checker (separate stub module, not part of the Go module)
 ```
 
 The codec implements packaging version 0.3: the element sequence (genBox / full /
@@ -124,6 +127,15 @@ regenerated from the codec and byte-pinned in CI:
 locmaf vectors gen     # rewrite the corpus from the codec
 locmaf vectors check   # re-derive and byte-compare against disk
 ```
+
+## Browser conformance checker
+
+<https://locmaf.dev/tools/> runs the same conformance core in the browser
+via WebAssembly (`cmd/locmaf-wasm`, a shim over the `conform` package): drop
+a `.locmaf` file to verify it, or a fragmented CMAF file to align it.
+Everything runs client-side — the file never leaves your machine. The page
+is built by `web/`'s `npm run build` (which compiles the wasm first) and
+served as static files; see [`web/`](web/).
 
 ## Related
 

@@ -3,7 +3,7 @@ module github.com/Eyevinn/locmaf
 go 1.25.0
 
 require (
-	github.com/Eyevinn/mp4ff v0.53.0
+	github.com/Eyevinn/mp4ff v0.54.0
 	github.com/stretchr/testify v1.11.1
 )
 

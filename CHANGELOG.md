@@ -8,7 +8,12 @@ Each release notes which LOCMAF packaging version (`locmafVersion`) it implement
 
 ## [Unreleased]
 
-Still implements LOCMAF packaging version `"0.3"`.
+_Nothing yet._
+
+## [0.2.0] - 2026-07-17
+
+Still implements LOCMAF packaging version `"0.3"` — a Go-module feature
+release, not a packaging-version bump.
 
 ### Added
 
@@ -34,6 +39,13 @@ Still implements LOCMAF packaging version `"0.3"`.
 - `locmaf align` now explains normalizations at the box/field level
   (e.g. `moof/traf/tfdt: version 0 → 1 [TFDT_WIDENED]`) instead of a
   byte offset; the raw hex diff moved behind `-bytes`.
+- Updated the `mp4ff` dependency to v0.54.0.
+
+### Security
+
+- Added a `govulncheck` CI workflow: reachability-based vulnerability
+  scanning (dependencies and the Go stdlib) on push/PR and a weekday
+  schedule, in place of Dependabot alerts.
 
 See the [README](README.md#command-line-tool) for the CLI reference.
 
@@ -121,5 +133,6 @@ Implements LOCMAF packaging version `"0.3"`.
 - Site and slides rewritten for wire v0.3 (element types, vi64,
   packaging framing, no IANA actions) and shortened.
 
+[0.2.0]: https://github.com/Eyevinn/locmaf/releases/tag/v0.2.0
 [0.1.1]: https://github.com/Eyevinn/locmaf/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Eyevinn/locmaf/releases/tag/v0.1.0

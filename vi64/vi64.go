@@ -84,3 +84,14 @@ func Read(r io.ByteReader) (uint64, error) {
 	}
 	return v, nil
 }
+
+// PeekLen returns the total encoded length in bytes (1 to 9) of the vi64
+// that starts with the byte first. It reads only the leading-ones length
+// prefix, so a caller can size a read before it has the whole value.
+//
+// Unlike Len, which is an encode-side helper reporting the shortest form
+// of a value, PeekLen reports the on-wire length of an encoding, and so
+// is the right function to advance a cursor past a parsed value.
+func PeekLen(first byte) int {
+	return bits.LeadingZeros8(^first) + 1
+}

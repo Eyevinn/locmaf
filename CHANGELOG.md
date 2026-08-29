@@ -10,6 +10,27 @@ Each release notes which LOCMAF packaging version (`locmafVersion`) it implement
 
 _Nothing yet._
 
+## [0.2.1] - 2026-08-29
+
+Still implements LOCMAF packaging version `"0.3"` — a small addition to the
+`vi64` package and a dependency bump, with no wire or packaging change.
+
+### Added
+
+- `vi64.PeekLen`: the encoded length in bytes (1 to 9) of the vi64 starting
+  with a given byte, taken from the leading-ones prefix alone, so a parser can
+  size a read before it holds the whole value. Where `Len` reports the shortest
+  form of a *value*, `PeekLen` reports the on-wire length of an *encoding* —
+  which is what advancing over a received vi64 needs, since MOQT permits
+  non-minimal encodings.
+- Test vectors pinning the non-minimal encodings of zero (`0x00`, `0x8000`,
+  `0xc00000`) that draft-ietf-moq-transport-18 permits, and `PeekLen` against
+  every encoding length as well as the draft's Table 2 examples.
+
+### Changed
+
+- Updated the `mp4ff` dependency to v0.56.0.
+
 ## [0.2.0] - 2026-07-17
 
 Still implements LOCMAF packaging version `"0.3"` — a Go-module feature
@@ -133,6 +154,7 @@ Implements LOCMAF packaging version `"0.3"`.
 - Site and slides rewritten for wire v0.3 (element types, vi64,
   packaging framing, no IANA actions) and shortened.
 
+[0.2.1]: https://github.com/Eyevinn/locmaf/releases/tag/v0.2.1
 [0.2.0]: https://github.com/Eyevinn/locmaf/releases/tag/v0.2.0
 [0.1.1]: https://github.com/Eyevinn/locmaf/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Eyevinn/locmaf/releases/tag/v0.1.0

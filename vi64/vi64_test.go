@@ -164,3 +164,43 @@ func TestReadSequential(t *testing.T) {
 		t.Errorf("Read past end = %v, want io.EOF", err)
 	}
 }
+
+// TestPeekLen checks that PeekLen agrees with the length Parse consumes,
+// including for the non-minimal encodings of Table 2.
+func TestPeekLen(t *testing.T) {
+	for _, tc := range draftExamples {
+		if got := vi64.PeekLen(tc.enc[0]); got != len(tc.enc) {
+			t.Errorf("PeekLen(%#02x) = %d, want %d", tc.enc[0], got, len(tc.enc))
+		}
+	}
+	for n := 1; n <= vi64.MaxLen; n++ {
+		var first byte
+		if n == 9 {
+			first = 0xFF
+		} else {
+			first = 0xFF << (9 - n)
+		}
+		if got := vi64.PeekLen(first); got != n {
+			t.Errorf("PeekLen(%#02x) = %d, want %d", first, got, n)
+		}
+		// Every value bit set below the prefix must not change the length.
+		if got := vi64.PeekLen(first | (0xFF >> n)); got != n {
+			t.Errorf("PeekLen(%#02x) = %d, want %d", first|(0xFF>>n), got, n)
+		}
+	}
+}
+
+// TestZeroNonMinimal pins the encodings of zero the draft calls out:
+// 0x00, 0x8000 and 0xc00000 all mean 0.
+func TestZeroNonMinimal(t *testing.T) {
+	for _, enc := range [][]byte{{0x00}, {0x80, 0x00}, {0xc0, 0x00, 0x00}} {
+		v, n, err := vi64.Parse(enc)
+		if err != nil || v != 0 || n != len(enc) {
+			t.Errorf("Parse(% x) = (%d, %d, %v), want (0, %d, nil)", enc, v, n, err, len(enc))
+		}
+		r, err := vi64.Read(bytes.NewReader(enc))
+		if err != nil || r != 0 {
+			t.Errorf("Read(% x) = (%d, %v), want (0, nil)", enc, r, err)
+		}
+	}
+}

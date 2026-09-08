@@ -143,7 +143,7 @@
     </div>
     <figure class="figure" style="margin-top:32px;">
       <img src="./assets/diagrams/bytes-saved.svg" alt="Bar chart comparing 26 040 bytes of CMAF moof overhead to 592 bytes of LOCMAF wire bytes."/>
-      <figcaption>Measured with the v0.2 implementation; v0.3 keeps the same 2-byte steady state.</figcaption>
+      <figcaption>Measured with the v0.2 implementation; v0.3 keeps the same 2-byte steady state and the numbers are unchanged.</figcaption>
     </figure>
     <figure class="figure">
       <img src="./assets/diagrams/delta-stream.svg" alt="Timeline of one MoQ group: a full moof followed by a brief IDR-transition delta and then a long run of 2-byte steady-state delta moofs."/>
@@ -432,9 +432,9 @@
       <div>
         <h2>Origin</h2>
         <p>
-          LOCMAF was developed as part of Hugo Björs's KTH MSc thesis,
-          <em>Efficient DRM in MoQ using Low Overhead CMAF</em> (2026), under the
-          supervision of Torbjörn Einarsson at Eyevinn Technology.
+          The first version of LOCMAF was developed as part of Hugo Björs's KTH
+          MSc thesis, <em>Efficient DRM in MoQ using Low Overhead CMAF</em> (2026),
+          under the supervision of Torbjörn Einarsson at Eyevinn Technology.
         </p>
         <p>
           The format is intended as a packaging encoding in the CMSF catalog
@@ -454,9 +454,10 @@
           as a packaging mode rather than proceeding as a standalone draft.
         </p>
         <p>
-          The reference encoder and decoder live in <code>Eyevinn/moqlivemock</code>
-          and the browser player in <code>Eyevinn/warp-player</code>; both currently
-          implement v0.2, with the v0.3 update in progress.
+          The Go reference encoder and decoder live in <code>Eyevinn/locmaf</code>
+          and are used by the <code>Eyevinn/moqlivemock</code> server and subscriber;
+          the browser player is <code>Eyevinn/warp-player</code>. All three implement
+          v0.3 and interoperate end to end.
         </p>
       </div>
     </div>

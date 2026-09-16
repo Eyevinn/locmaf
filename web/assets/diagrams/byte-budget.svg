@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 476"
+     role="img" aria-label="Byte budget of a single-sample CMAF chunk header: 100 bytes, of which 56 are box headers and 16 are version/flags words, leaving six numbers that LOCMAF derives.">
+  <style>
+    .title { font-family: 'LevelOne','Helvetica Neue',Arial,sans-serif; font-size: 14px; fill: #ffffff; }
+    .field { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; fill: #e0e0e0; }
+    .lbl   { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; fill: #e0e0e0; }
+    .note  { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 10px; fill: #9a9a9a; }
+    .big   { font-family: 'LevelOne','Helvetica Neue',Arial,sans-serif; font-size: 20px; fill: #FC9900; }
+    .bigc  { font-family: 'LevelOne','Helvetica Neue',Arial,sans-serif; font-size: 20px; fill: #61B5E5; }
+  </style>
+
+  <!-- ============ LEFT: the 100-byte budget ============ -->
+  <text x="24" y="26" class="title">One single-sample CMAF chunk header = 100 B</text>
+
+  <g transform="translate(24,38)">
+    <rect x="0" y="0" width="430" height="330" rx="8" fill="#1f1f1f" stroke="#646464"/>
+
+    <!-- column captions -->
+    <text x="12"  y="20" class="note">box</text>
+    <text x="86"  y="20" class="note">size + fourcc</text>
+    <text x="418" y="20" class="note" text-anchor="end">bytes</text>
+
+    <!-- rows: bar starts x=80, 14 px per byte -->
+    <!-- moof 8 -->
+    <text x="12" y="46" class="lbl">moof</text>
+    <rect x="80" y="34" width="112" height="18" fill="#FC9900" opacity="0.55" stroke="#FC9900"/>
+    <text x="418" y="47" class="lbl" text-anchor="end">8</text>
+
+    <!-- mfhd 16 -->
+    <text x="12" y="74" class="lbl">mfhd</text>
+    <rect x="80"  y="62" width="112" height="18" fill="#FC9900" opacity="0.55" stroke="#FC9900"/>
+    <rect x="192" y="62" width="112" height="18" fill="#FC9900" opacity="0.18" stroke="#FC9900"/>
+    <text x="198" y="75" class="note">flags + seq_num</text>
+    <text x="418" y="75" class="lbl" text-anchor="end">16</text>
+
+    <!-- traf 8 -->
+    <text x="12" y="102" class="lbl">traf</text>
+    <rect x="80" y="90" width="112" height="18" fill="#FC9900" opacity="0.55" stroke="#FC9900"/>
+    <text x="418" y="103" class="lbl" text-anchor="end">8</text>
+
+    <!-- tfhd 20 -->
+    <text x="12" y="130" class="lbl">tfhd</text>
+    <rect x="80"  y="118" width="112" height="18" fill="#FC9900" opacity="0.55" stroke="#FC9900"/>
+    <rect x="192" y="118" width="168" height="18" fill="#FC9900" opacity="0.18" stroke="#FC9900"/>
+    <text x="198" y="131" class="note">flags + track_ID + size</text>
+    <text x="418" y="131" class="lbl" text-anchor="end">20</text>
+
+    <!-- tfdt 20 -->
+    <text x="12" y="158" class="lbl">tfdt</text>
+    <rect x="80"  y="146" width="112" height="18" fill="#FC9900" opacity="0.55" stroke="#FC9900"/>
+    <rect x="192" y="146" width="168" height="18" fill="#FC9900" opacity="0.18" stroke="#FC9900"/>
+    <text x="198" y="159" class="note">flags + bmdt (64-bit)</text>
+    <text x="418" y="159" class="lbl" text-anchor="end">20</text>
+
+    <!-- trun 20 -->
+    <text x="12" y="186" class="lbl">trun</text>
+    <rect x="80"  y="174" width="112" height="18" fill="#FC9900" opacity="0.55" stroke="#FC9900"/>
+    <rect x="192" y="174" width="168" height="18" fill="#FC9900" opacity="0.18" stroke="#FC9900"/>
+    <text x="198" y="187" class="note">flags + count + offset</text>
+    <text x="418" y="187" class="lbl" text-anchor="end">20</text>
+
+    <!-- mdat 8 -->
+    <text x="12" y="214" class="lbl">mdat</text>
+    <rect x="80" y="202" width="112" height="18" fill="#FC9900" opacity="0.55" stroke="#FC9900"/>
+    <text x="418" y="215" class="lbl" text-anchor="end">8</text>
+
+    <line x1="12" y1="232" x2="418" y2="232" stroke="#646464"/>
+    <text x="12"  y="252" class="field">TOTAL, before one byte of media</text>
+    <text x="418" y="252" class="big" text-anchor="end">100 B</text>
+
+    <!-- the tax -->
+    <rect x="12" y="264" width="406" height="54" rx="4" fill="#FC9900" opacity="0.10" stroke="#FC9900" stroke-dasharray="3 3"/>
+    <text x="22" y="282" class="note">7 box headers x 8 B (size + fourcc) ......... 56 B</text>
+    <text x="22" y="296" class="note">4 version/flags words x 4 B ................. 16 B</text>
+    <text x="22" y="312" class="field">72 of 100 B carry no media information</text>
+  </g>
+
+  <!-- ============ ARROW ============ -->
+  <g transform="translate(462,200)">
+    <path d="M0 0 L36 0" stroke="#FC9900" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M28 -6 L38 0 L28 6" stroke="#FC9900" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="18" y="-12" font-family="'LevelOne','Helvetica Neue',Arial,sans-serif" font-size="11" fill="#FC9900" text-anchor="middle">LOCMAF</text>
+  </g>
+
+  <!-- ============ RIGHT: the six real numbers ============ -->
+  <text x="516" y="26" class="title">The 28 B that remain are six numbers</text>
+
+  <g transform="translate(516,38)">
+    <rect x="0" y="0" width="340" height="330" rx="8" fill="#1f1f1f" stroke="#646464"/>
+
+    <text x="12" y="22" class="note">every one is already known to the receiver</text>
+
+    <g transform="translate(12,32)">
+      <rect x="0" y="0" width="316" height="26" rx="4" fill="#33aa55" opacity="0.30" stroke="#33aa55" stroke-width="1.2"/>
+      <text x="8"   y="17" class="lbl">sequence_number</text>
+      <text x="308" y="17" class="note" text-anchor="end">not used</text>
+    </g>
+    <g transform="translate(12,64)">
+      <rect x="0" y="0" width="316" height="26" rx="4" fill="#33aa55" opacity="0.30" stroke="#33aa55" stroke-width="1.2"/>
+      <text x="8"   y="17" class="lbl">track_ID</text>
+      <text x="308" y="17" class="note" text-anchor="end">from init</text>
+    </g>
+    <g transform="translate(12,96)">
+      <rect x="0" y="0" width="316" height="26" rx="4" fill="#33aa55" opacity="0.30" stroke="#33aa55" stroke-width="1.2"/>
+      <text x="8"   y="17" class="lbl">default_sample_size</text>
+      <text x="308" y="17" class="note" text-anchor="end">= object len</text>
+    </g>
+    <g transform="translate(12,128)">
+      <rect x="0" y="0" width="316" height="26" rx="4" fill="#61B5E5" opacity="0.30" stroke="#61B5E5" stroke-width="1.2"/>
+      <text x="8"   y="17" class="lbl">baseMediaDecodeTime</text>
+      <text x="308" y="17" class="note" text-anchor="end">prev + dur</text>
+    </g>
+    <g transform="translate(12,160)">
+      <rect x="0" y="0" width="316" height="26" rx="4" fill="#61B5E5" opacity="0.30" stroke="#61B5E5" stroke-width="1.2"/>
+      <text x="8"   y="17" class="lbl">sample_count</text>
+      <text x="308" y="17" class="note" text-anchor="end">unchanged</text>
+    </g>
+    <g transform="translate(12,192)">
+      <rect x="0" y="0" width="316" height="26" rx="4" fill="#33aa55" opacity="0.30" stroke="#33aa55" stroke-width="1.2"/>
+      <text x="8"   y="17" class="lbl">data_offset</text>
+      <text x="308" y="17" class="note" text-anchor="end">implicit</text>
+    </g>
+
+    <line x1="12" y1="234" x2="328" y2="234" stroke="#646464"/>
+
+    <!-- the 2-byte result -->
+    <text x="12" y="256" class="field">nothing changed since last moof</text>
+    <g transform="translate(12,266)">
+      <rect x="0"  y="0" width="150" height="24" rx="4" fill="#61B5E5" opacity="0.45" stroke="#61B5E5" stroke-width="1.5"/>
+      <text x="8"  y="16" class="lbl">element_type = 3</text>
+      <rect x="158" y="0" width="158" height="24" rx="4" fill="#61B5E5" opacity="0.45" stroke="#61B5E5" stroke-width="1.5"/>
+      <text x="166" y="16" class="lbl">props_length = 0</text>
+    </g>
+    <text x="12"  y="316" class="field">LOCMAF delta moof</text>
+    <text x="328" y="318" class="bigc" text-anchor="end">2 B</text>
+  </g>
+
+  <!-- right-panel legend -->
+  <g transform="translate(24,384)">
+    <rect x="0"  y="0" width="11" height="11" fill="#33aa55" opacity="0.5" stroke="#33aa55"/>
+    <text x="16" y="9" class="note">omitted / implicit</text>
+    <rect x="150" y="0" width="11" height="11" fill="#61B5E5" opacity="0.5" stroke="#61B5E5"/>
+    <text x="166" y="9" class="note">derived from prev moof</text>
+  </g>
+
+  <!-- footer note -->
+  <text x="24" y="414" class="note">Sample duration comes from trex in the moov, sent once in the init. Not in trex? CMAF pays +4 B per fragment (104 B); LOCMAF +3 B once per group.</text>
+  <text x="24" y="434" class="note">CMAF = header + fragments. The header (ftyp + moov, ~700-900 B) rides in the catalog: one-time, and shared with the plain cmaf track.</text>
+  <text x="24" y="462" class="note">Measured on testdata/vectors/single-sample -- canonical CMAF; a real packager's moof is larger. 50 : 1 on header bytes; mdat untouched.</text>
+</svg>

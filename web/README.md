@@ -11,7 +11,10 @@
 Information site and MARP deck for [LOCMAF](https://datatracker.ietf.org/doc/draft-einarsson-moq-locmaf/) — *Low Overhead CMAF for MOQ.*
 
 The primary surface is a single-page static site (`site/index.html`).
-A MARP-rendered slide deck (`slides/locmaf.md`) is published as a secondary artifact at `/slides/`.
+Two MARP-rendered slide decks are published as secondary artifacts: the full deck
+(`slides/locmaf.md`) at `/slides/`, and a 4-minute lightning talk
+(`slides/locmaf-lightning.md`) at `/slides/lightning.html`. The lightning deck carries
+its script as MARP presenter notes, with per-slide timings.
 
 ## Specification
 
@@ -73,6 +76,8 @@ Set `PORT=9000` to pick a different port. Ctrl-C to stop.
 | `npm run build:slides:html`   | Slide deck → `public/slides/index.html`       |
 | `npm run build:slides:pdf`    | Slide deck → `public/slides/locmaf.pdf`       |
 | `npm run build:slides:pptx`   | Slide deck → `public/slides/locmaf.pptx`      |
+| `npm run build:slides:lightning` | Lightning deck → `public/slides/lightning.html` |
+| `npm run build:slides:lightning:pdf` | Lightning deck → `public/slides/locmaf-lightning.pdf` |
 
 ## Style
 

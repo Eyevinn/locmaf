@@ -9,3 +9,10 @@ public/
 # Local deploy script (scp target is environment-specific)
 update_site.sh
 out/
+
+# Generated Marp theme build artifacts. locmaf.standalone.css inlines the
+# licensed LevelOne font and the logos as data URIs for the VS Code preview —
+# build it locally with `npm run build:theme`, never commit it to this public
+# repo. assets/generated/ holds the downscaled logo that build consumes.
+web/themes/*.standalone.css
+web/assets/generated/

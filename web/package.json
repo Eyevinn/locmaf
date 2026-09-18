@@ -2,10 +2,11 @@
   "name": "locmaf-site",
   "version": "0.1.0",
   "private": true,
-  "description": "locmaf.dev — information site and MARP deck for LOCMAF (Low Overhead CMAF for MOQ).",
+  "description": "locmaf.dev \u2014 information site and MARP deck for LOCMAF (Low Overhead CMAF for MOQ).",
   "homepage": "https://locmaf.dev",
   "scripts": {
     "dev": "marp --watch --server slides/",
+    "build:theme": "node scripts/build-standalone-theme.mjs",
     "preview": "node scripts/preview.mjs",
     "build:wasm": "node scripts/build-wasm.mjs",
     "build:site": "node scripts/build-site.mjs",

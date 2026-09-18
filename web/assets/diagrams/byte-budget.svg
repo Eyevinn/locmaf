@@ -146,5 +146,5 @@
   <!-- footer note -->
   <text x="24" y="414" class="note">Sample duration comes from trex in the moov, sent once in the init. Not in trex? CMAF pays +4 B per fragment (104 B); LOCMAF +3 B once per group.</text>
   <text x="24" y="434" class="note">CMAF = header + fragments. The header (ftyp + moov, ~700-900 B) rides in the catalog: one-time, and shared with the plain cmaf track.</text>
-  <text x="24" y="462" class="note">Measured on testdata/vectors/single-sample -- canonical CMAF; a real packager's moof is larger. 50 : 1 on header bytes; mdat untouched.</text>
+  <text x="24" y="462" class="note">Measured on testdata/vectors/single-sample -- canonical CMAF; a real packager's moof is larger. mdat untouched.</text>
 </svg>

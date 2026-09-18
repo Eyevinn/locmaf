@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 380"
+     role="img" aria-label="A single-sample CMAF chunk header is 100 bytes across seven boxes. The six numbers that remain are all already known to the receiver, so the LOCMAF delta moof is 2 bytes.">
+  <style>
+    .title { font-family: 'LevelOne','Helvetica Neue',Arial,sans-serif; font-size: 15px; fill: #ffffff; }
+    .field { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 15px; fill: #e8e8e8; }
+    .lbl   { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 14px; fill: #e0e0e0; }
+    .note  { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; fill: #a8a8a8; }
+    .big   { font-family: 'LevelOne','Helvetica Neue',Arial,sans-serif; font-size: 24px; fill: #FC9900; }
+    .bigc  { font-family: 'LevelOne','Helvetica Neue',Arial,sans-serif; font-size: 24px; fill: #61B5E5; }
+  </style>
+
+  <!--
+    Lightning-deck variant of byte-budget.svg: same geometry, larger type, and
+    none of the explanatory footnotes — those stay in the full diagram used by
+    the long deck and locmaf.dev. Bar scale: 14 px per byte.
+  -->
+
+  <!-- ===== LEFT: the 100 bytes ===== -->
+  <text x="24" y="24" class="title">One single-sample CMAF chunk header</text>
+  <rect x="24" y="34" width="430" height="330" rx="8" fill="#1f1f1f" stroke="#646464"/>
+  <text x="36"  y="58" class="note">box</text>
+  <text x="442" y="58" class="note" text-anchor="end">bytes</text>
+
+  <g>
+    <text x="36" y="82" class="lbl">moof</text>
+    <rect x="92" y="68" width="112" height="20" fill="#FC9900" opacity="0.55" stroke="#FC9900"/>
+    <text x="442" y="82" class="lbl" text-anchor="end">8</text>
+
+    <text x="36" y="114" class="lbl">mfhd</text>
+    <rect x="92"  y="100" width="112" height="20" fill="#FC9900" opacity="0.55" stroke="#FC9900"/>
+    <rect x="204" y="100" width="112" height="20" fill="#FC9900" opacity="0.18" stroke="#FC9900"/>
+    <text x="442" y="114" class="lbl" text-anchor="end">16</text>
+
+    <text x="36" y="146" class="lbl">traf</text>
+    <rect x="92" y="132" width="112" height="20" fill="#FC9900" opacity="0.55" stroke="#FC9900"/>
+    <text x="442" y="146" class="lbl" text-anchor="end">8</text>
+
+    <text x="36" y="178" class="lbl">tfhd</text>
+    <rect x="92"  y="164" width="112" height="20" fill="#FC9900" opacity="0.55" stroke="#FC9900"/>
+    <rect x="204" y="164" width="168" height="20" fill="#FC9900" opacity="0.18" stroke="#FC9900"/>
+    <text x="442" y="178" class="lbl" text-anchor="end">20</text>
+
+    <text x="36" y="210" class="lbl">tfdt</text>
+    <rect x="92"  y="196" width="112" height="20" fill="#FC9900" opacity="0.55" stroke="#FC9900"/>
+    <rect x="204" y="196" width="168" height="20" fill="#FC9900" opacity="0.18" stroke="#FC9900"/>
+    <text x="442" y="210" class="lbl" text-anchor="end">20</text>
+
+    <text x="36" y="242" class="lbl">trun</text>
+    <rect x="92"  y="228" width="112" height="20" fill="#FC9900" opacity="0.55" stroke="#FC9900"/>
+    <rect x="204" y="228" width="168" height="20" fill="#FC9900" opacity="0.18" stroke="#FC9900"/>
+    <text x="442" y="242" class="lbl" text-anchor="end">20</text>
+
+    <text x="36" y="274" class="lbl">mdat</text>
+    <rect x="92" y="260" width="112" height="20" fill="#FC9900" opacity="0.55" stroke="#FC9900"/>
+    <text x="442" y="274" class="lbl" text-anchor="end">8</text>
+  </g>
+
+  <line x1="36" y1="292" x2="442" y2="292" stroke="#646464"/>
+  <text x="36"  y="318" class="field">before one byte of media</text>
+  <text x="442" y="320" class="big" text-anchor="end">100 B</text>
+  <text x="36"  y="350" class="note">56 B is size + fourcc · 16 B is version/flags</text>
+
+  <!-- ===== ARROW ===== -->
+  <g transform="translate(460,196)">
+    <path d="M0 0 L16 0" stroke="#FC9900" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M10 -6 L18 0 L10 6" stroke="#FC9900" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- ===== RIGHT: all six are already known ===== -->
+  <text x="486" y="24" class="title">Every number is already known</text>
+  <rect x="486" y="34" width="370" height="330" rx="8" fill="#1f1f1f" stroke="#646464"/>
+
+  <g>
+    <rect x="498" y="52" width="346" height="26" rx="4" fill="#33aa55" opacity="0.30" stroke="#33aa55"/>
+    <text x="508" y="70" class="lbl">sequence_number</text>
+    <text x="834" y="70" class="note" text-anchor="end">not used</text>
+
+    <rect x="498" y="84" width="346" height="26" rx="4" fill="#33aa55" opacity="0.30" stroke="#33aa55"/>
+    <text x="508" y="102" class="lbl">track_ID</text>
+    <text x="834" y="102" class="note" text-anchor="end">from init</text>
+
+    <rect x="498" y="116" width="346" height="26" rx="4" fill="#33aa55" opacity="0.30" stroke="#33aa55"/>
+    <text x="508" y="134" class="lbl">default_sample_size</text>
+    <text x="834" y="134" class="note" text-anchor="end">= object len</text>
+
+    <rect x="498" y="148" width="346" height="26" rx="4" fill="#61B5E5" opacity="0.30" stroke="#61B5E5"/>
+    <text x="508" y="166" class="lbl">baseMediaDecodeTime</text>
+    <text x="834" y="166" class="note" text-anchor="end">prev + dur</text>
+
+    <rect x="498" y="180" width="346" height="26" rx="4" fill="#61B5E5" opacity="0.30" stroke="#61B5E5"/>
+    <text x="508" y="198" class="lbl">sample_count</text>
+    <text x="834" y="198" class="note" text-anchor="end">unchanged</text>
+
+    <rect x="498" y="212" width="346" height="26" rx="4" fill="#33aa55" opacity="0.30" stroke="#33aa55"/>
+    <text x="508" y="230" class="lbl">data_offset</text>
+    <text x="834" y="230" class="note" text-anchor="end">implicit</text>
+  </g>
+
+  <line x1="498" y1="256" x2="844" y2="256" stroke="#646464"/>
+  <g transform="translate(498,272)">
+    <rect x="0"   y="0" width="166" height="28" rx="4" fill="#61B5E5" opacity="0.45" stroke="#61B5E5" stroke-width="1.5"/>
+    <text x="10"  y="19" class="lbl">element_type = 3</text>
+    <rect x="178" y="0" width="168" height="28" rx="4" fill="#61B5E5" opacity="0.45" stroke="#61B5E5" stroke-width="1.5"/>
+    <text x="188" y="19" class="lbl">props_length = 0</text>
+  </g>
+  <text x="498" y="348" class="field">LOCMAF delta moof</text>
+  <text x="844" y="350" class="bigc" text-anchor="end">2 B</text>
+</svg>

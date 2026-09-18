@@ -46,7 +46,8 @@
     reconstructed into <strong>functionally lossless</strong> CMAF chunks at the receiver.
   </div>
   <div class="cta-row">
-    <a class="cta primary" href="./slides/">Open the slide deck →</a>
+    <a class="cta primary" href="./slides/">Full slide deck →</a>
+    <a class="cta ghost" href="./slides/lightning.html">Lightning talk (4 min)</a>
     <a class="cta ghost" href="https://datatracker.ietf.org/doc/draft-einarsson-moq-locmaf/">Spec</a>
     <a class="cta ghost" href="https://github.com/Eyevinn/moqlivemock">GitHub</a>
     <a class="cta ghost" href="https://moqlivemock.demo.osaas.io">Live demo</a>
@@ -60,8 +61,14 @@
       <h2>Big chunks → tiny deltas → identical big chunks</h2>
     </header>
     <p>
-      A typical CMAF chunk header for one sample is around <strong>~104 bytes</strong>.
-      With sample-level objects (every video frame, every audio frame is one MoQ object), that overhead becomes a meaningful share of the wire cost — about 25 % for low-bitrate audio, smaller for video where the media bitrate still dominates.
+      A CMAF track is a <strong>header plus fragments</strong>. The CMAF Header
+      (<code>ftyp</code> + <code>moov</code>, typically <strong>~700–900 bytes</strong>) is needed
+      <em>once</em>: it rides in the catalog, shared with the plain <code>cmaf</code> track, and LOCMAF
+      leaves it untouched. What LOCMAF compresses is the <em>per-fragment</em> cost.
+    </p>
+    <p>
+      A CMAF chunk header for one sample is around <strong>~100 bytes</strong>.
+      With sample-level objects (every video frame, every audio frame is one MoQ object), that overhead becomes a meaningful share of the wire cost — roughly a quarter of the wire for 128 kbps AAC, ~37 % at 64 kbps, and more than half for 32 kbps Opus — where the <code>moof</code> is larger than the media it describes — smaller for video where the media bitrate still dominates.
       LOCMAF observes that <em>consecutive moof boxes are almost identical</em> and delta-encodes them — applied to clear audio
       and <code>cbcs</code> audio the delta moof shrinks to <strong>two bytes</strong>, and the same approach extends to DRM-protected video.
       It targets the same low-latency CMAF-chunk workload as <strong>LL-HLS Parts</strong> and <strong>DASH Chunked CMAF</strong> —
@@ -69,8 +76,29 @@
     </p>
     <figure class="figure">
       <img src="./assets/logomark-dark.svg" alt="A row of CMAF chunks compressed into delta blocks on the wire, then decompressed back to identical CMAF chunks." style="max-width:560px;"/>
-      <figcaption>Sender packages big CMAF chunks. The wire carries tiny deltas. The receiver rebuilds byte-identical chunks for the MSE player.</figcaption>
+      <figcaption>Sender packages big CMAF chunks. The wire carries tiny deltas. The receiver rebuilds functionally lossless CMAF chunks for the MSE player — byte-identical across conformant receivers.</figcaption>
     </figure>
+
+    <h3>Where do the 100 bytes go?</h3>
+    <p>
+      Seven boxes, each paying an 8-byte <code>size</code> + fourcc header — that is <strong>56 bytes</strong>.
+      Four <code>version</code>/<code>flags</code> words add <strong>16 more</strong>. So
+      <strong>72 of the 100 bytes carry no media information at all</strong>, and each of the six numbers
+      that remain is already known to the receiver: the sequence number is unused, the track ID comes from
+      the init, the sample size equals the MoQ object length, the decode time is the previous one plus the
+      previous duration, the sample count is unchanged, and the data offset is implicit.
+    </p>
+    <figure class="figure">
+      <img src="./assets/diagrams/byte-budget.svg" alt="Byte budget of a single-sample CMAF chunk header: 100 bytes across seven boxes, of which 56 are box headers and 16 are version/flags words, leaving six numbers that LOCMAF derives into a 2-byte delta moof."/>
+      <figcaption>Every byte of a single-sample CMAF chunk header, and what LOCMAF does with it. Measured on <code>testdata/vectors/single-sample</code>.</figcaption>
+    </figure>
+    <p>
+      A LOCMAF group therefore needs only two things: the <strong>first <code>baseMediaDecodeTime</code></strong>
+      and the sample <strong>duration</strong> — and the duration is normally already in <code>trex</code> in the
+      <code>moov</code>, delivered once with the init. CMAF also allows it in the <code>tfhd</code>; signaling it
+      there instead costs <strong>+4 bytes in the group's first object</strong>. Everything after that object is
+      a 2-byte delta.
+    </p>
   </div>
 </section>
 
@@ -396,6 +424,11 @@
         <span class="label">Live demo</span>
         <span class="title">moqlivemock.demo.osaas.io</span>
         <span class="desc">Public demo of the LOCMAF + DRM stack streaming over MOQT.</span>
+      </a>
+      <a class="res" href="./slides/lightning.html">
+        <span class="label">Slides</span>
+        <span class="title">Lightning talk — 4 minutes</span>
+        <span class="desc">The short version given at RTC.ON 2026: why a CMAF chunk header costs 100 bytes, and what LOCMAF sends instead.</span>
       </a>
       <a class="res" href="https://datatracker.ietf.org/doc/draft-einarsson-moq-locmaf/">
         <span class="label">Spec</span>

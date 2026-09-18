@@ -20,8 +20,10 @@ Initial version: Hugo Björs (KTH MSc thesis)
 
 # Why a new packaging format?
 
-- CMAF chunk = one `moof` + one `mdat`
-- **Single-sample CMAF chunk header is ~104 B** of metadata
+- **CMAF = header + fragments.** The CMAF Header (`ftyp` + `moov`, ~700–900 B) is a
+  **one-time** cost that rides in the catalog — LOCMAF leaves it untouched
+- Each fragment = one `moof` + one `mdat` = one MoQ object
+- **Single-sample CMAF chunk header is ~100 B** of metadata
 - LOC (~9 B) and WebCodecs carry **codec frames only** — no DRM, no CMAF semantics
 - For low latency we want sample-level objects —
   moof overhead becomes a meaningful share of the wire cost (~25 % for low-bitrate audio)
@@ -66,6 +68,16 @@ Initial version: Hugo Björs (KTH MSc thesis)
 
 ---
 
+# Why is it 100 bytes?
+
+![w:880](../assets/diagrams/byte-budget.svg)
+
+Seven boxes, each paying an 8-byte `size` + fourcc header: **56 B**. Four `version`/`flags`
+words: **16 B**. So **72 of the 100 bytes carry no media information** — and every one of the six
+numbers that remain is already known to the receiver.
+
+---
+
 # A moof has very predictable structure
 
 ![w:1080](../assets/diagrams/moof-anatomy.svg)
@@ -80,6 +92,11 @@ Initial version: Hugo Björs (KTH MSc thesis)
    First `moof` per group is *full*; every subsequent `moof` is a *delta*
    carrying only what changed. BMDT is always derived from the previous moof —
    a timeline discontinuity re-anchors with a new **full** header mid-group.
+
+A group therefore needs just two things: the **first `baseMediaDecodeTime`** and the sample
+**duration** — and the duration is normally already in `trex` in the `moov`.
+If it is *not* in `trex`, CMAF must carry it in the `tfhd` — **+4 B on every fragment**
+(104 B instead of 100). LOCMAF pays **+3 B once per group**; the steady state stays 2 B.
 
 `mdat` size is implied by the MoQ object length — the 8-byte `size + 'mdat'`
 box header never goes on the wire.
@@ -200,8 +217,8 @@ Otherwise durations drift ±1 tick, get sent every fragment, and the 2-byte stea
 
 # Init segments — verbatim via the catalog
 
-- The CMAF Header (`ftyp` + `moov`) is **byte-identical** to what a
-  plain `cmaf` track carries — LOCMAF has **no bespoke `moov` codec**
+- The CMAF Header (`ftyp` + `moov`, typically **~700–900 B**) is **byte-identical**
+  to what a plain `cmaf` track carries — LOCMAF has **no bespoke `moov` codec**
 - MSF carries it in the catalog (`initDataList` / `initRef`) → init is a
   **one-time** cost amortised across the whole subscription
 - A `cmaf` track and a `locmaf` track wrapping the same source can

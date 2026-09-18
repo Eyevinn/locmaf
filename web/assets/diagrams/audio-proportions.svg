@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 424"
+     role="img" aria-label="AAC 96 kbps drawn to scale. Each CMAF chunk is a 100-byte header above 256 bytes of media; each LOCMAF object replaces that header with a 2-byte delta moof, one pixel at this scale, above the same 256 bytes of media.">
+  <style>
+    .cap { font-family: 'LevelOne','Helvetica Neue',Arial,sans-serif; font-size: 16px; fill: #ffffff; }
+    .dot  { fill: #9a9a9a; }
+  </style>
+
+  <!--
+    Bars only — this figure sits beside slide text, which carries the numbers.
+    Dots sit INSIDE each box: more objects within the same segment / group.
+    The dots sit INSIDE each box: more objects within the same segment / group.
+    Same palette as moq-cmaf-mapping.svg. Drawn to scale at 0.5 px/byte:
+      CMAF   moof 92 B = 46 px · mdat header 8 B = 4 px · media 256 B = 128 px  (356 B total)
+      LOCMAF delta moof 2 B = 1 px                     · media 256 B = 128 px  (258 B total)
+  -->
+
+  <text x="189" y="18" class="cap" text-anchor="middle">AAC 96 kbps</text>
+
+  <!-- CMAF: dashed orange segment -->
+  <rect x="8" y="30" width="362" height="202" rx="8" fill="none" stroke="#FC9900" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <g>
+    <rect x="20"  y="42" width="80" height="46"  rx="2" fill="#FC9900"/>
+    <rect x="20"  y="88" width="80" height="4"         fill="#B87830"/>
+    <rect x="20"  y="92" width="80" height="128" rx="2" fill="#646464" opacity="0.7"/>
+
+    <rect x="116" y="42" width="80" height="46"  rx="2" fill="#FC9900"/>
+    <rect x="116" y="88" width="80" height="4"         fill="#B87830"/>
+    <rect x="116" y="92" width="80" height="128" rx="2" fill="#646464" opacity="0.7"/>
+
+    <rect x="212" y="42" width="80" height="46"  rx="2" fill="#FC9900"/>
+    <rect x="212" y="88" width="80" height="4"         fill="#B87830"/>
+    <rect x="212" y="92" width="80" height="128" rx="2" fill="#646464" opacity="0.7"/>
+  </g>
+  <g class="dot">
+    <circle cx="312" cy="131" r="6"/>
+    <circle cx="332" cy="131" r="6"/>
+    <circle cx="352" cy="131" r="6"/>
+  </g>
+
+  <!-- connector -->
+  <line x1="189" y1="232" x2="189" y2="262" stroke="#646464" stroke-width="1.2" stroke-dasharray="3 4"/>
+
+  <!-- LOCMAF: solid cyan MoQ group -->
+  <rect x="8" y="262" width="362" height="153" rx="8" fill="none" stroke="#61B5E5" stroke-width="1.5"/>
+  <g>
+    <rect x="20"  y="274" width="80" height="1"         fill="#61B5E5"/>
+    <rect x="20"  y="275" width="80" height="128" rx="2" fill="#646464" opacity="0.7"/>
+
+    <rect x="116" y="274" width="80" height="1"         fill="#61B5E5"/>
+    <rect x="116" y="275" width="80" height="128" rx="2" fill="#646464" opacity="0.7"/>
+
+    <rect x="212" y="274" width="80" height="1"         fill="#61B5E5"/>
+    <rect x="212" y="275" width="80" height="128" rx="2" fill="#646464" opacity="0.7"/>
+  </g>
+  <g class="dot">
+    <circle cx="312" cy="338" r="6"/>
+    <circle cx="332" cy="338" r="6"/>
+    <circle cx="352" cy="338" r="6"/>
+  </g>
+</svg>

@@ -123,6 +123,58 @@ func TestLoadCMAF(t *testing.T) {
 	require.Equal(t, raw[:lc.Starts[0]], lc.InitBytes)
 }
 
+// TestPreMoofBoxesBecomeGenBoxes: prft and emsg boxes ahead of a moof
+// belong to that moof's chunk and ride as its genBoxes, also ahead of a
+// segment's later fragments.
+func TestPreMoofBoxesBecomeGenBoxes(t *testing.T) {
+	init := mp4.CreateEmptyInit()
+	init.AddEmptyTrack(1000, "audio", "und")
+	var buf bytes.Buffer
+	require.NoError(t, init.Encode(&buf))
+	require.NoError(t, mp4.CreateStyp().Encode(&buf))
+	for i := 0; i < 2; i++ {
+		require.NoError(t, mp4.CreatePrftBox(0, 0, 1, mp4.NTP64(uint64(i+1)<<32), uint64(1024*i)).Encode(&buf))
+		if i == 1 {
+			emsg := &mp4.EmsgBox{Version: 1, SchemeIDURI: "urn:x", Value: "v", TimeScale: 1000, PresentationTime: 1024}
+			require.NoError(t, emsg.Encode(&buf))
+		}
+		frag, err := mp4.CreateFragment(uint32(i+1), 1)
+		require.NoError(t, err)
+		for j := 0; j < 2; j++ {
+			frag.AddFullSample(mp4.FullSample{
+				Sample:     mp4.Sample{Dur: 512, Size: 4},
+				DecodeTime: uint64(1024*i + 512*j),
+				Data:       []byte{1, 2, 3, byte(j)},
+			})
+		}
+		require.NoError(t, frag.Encode(&buf))
+	}
+
+	lc, err := conform.LoadCMAF(buf.Bytes(), nil)
+	require.NoError(t, err)
+	require.Len(t, lc.File.Segments, 1)
+	seg := lc.File.Segments[0]
+	require.Len(t, seg.Fragments, 2)
+	wantNames := [][]string{{"styp", "prft"}, {"prft", "emsg"}}
+	for i, frag := range seg.Fragments {
+		gbs, err := conform.FragmentGenBoxes(seg, i, frag)
+		require.NoError(t, err)
+		var names []string
+		for _, gb := range gbs {
+			names = append(names, gb.Name)
+		}
+		require.Equal(t, wantNames[i], names, "fragment %d", i)
+	}
+
+	rep, _, err := conform.Align(lc, false, false)
+	require.NoError(t, err)
+	require.Len(t, rep.Chunks, 2)
+	require.Equal(t, 2, rep.Aligned)
+	for _, c := range rep.Chunks {
+		require.NotContains(t, strings.Join(c.Normalizations, "\n"), "top-level boxes", "o%d", c.Object)
+	}
+}
+
 func TestAlign(t *testing.T) {
 	raw := synthCMAF(t)
 	lc, err := conform.LoadCMAF(raw, nil)

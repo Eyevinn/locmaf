@@ -8,7 +8,16 @@ Each release notes which LOCMAF packaging version (`locmafVersion`) it implement
 
 ## [Unreleased]
 
-_Nothing yet._
+### Fixed
+
+- `locmaf pack`/`align`, the `conform` package and the browser checker no
+  longer drop `prft` boxes, or `emsg` boxes ahead of a segment's later
+  fragments, from CMAF input: they now ride as genBoxes of their chunk.
+
+### Changed
+
+- Updated the `mp4ff` dependency to v0.58.0. Test-vector `init.mp4` files now
+  carry the `ftyp` compatible brands `cmfc, iso6` instead of `dash, iso6`.
 
 ## [0.2.1] - 2026-08-29
 

@@ -34,10 +34,12 @@ type Manifest struct {
 // effectiveJSON is the pinned JSON encoding of a moof-carrying object's
 // effective values: IVs and payloads as lowercase hex, flags as plain
 // uint32 numbers, the mdat payload by length + sha256 (the bytes
-// themselves live in the canonical .cmfc).
+// themselves live in the canonical .cmfc). A sequence number of 0 is
+// omitted, so chunks that carry none keep their earlier encoding.
 type effectiveJSON struct {
 	SampleCount            int           `json:"sampleCount"`
 	BMDT                   uint64        `json:"bmdt"`
+	SequenceNumber         uint32        `json:"sequenceNumber,omitempty"`
 	SampleDescriptionIndex uint32        `json:"sampleDescriptionIndex"`
 	Durations              []uint32      `json:"durations"`
 	Sizes                  []uint32      `json:"sizes"`
@@ -76,6 +78,7 @@ func marshalEffective(eff *locmaf.EffectiveValues) []byte {
 	ej := effectiveJSON{
 		SampleCount:            eff.SampleCount,
 		BMDT:                   eff.BMDT,
+		SequenceNumber:         eff.SequenceNumber,
 		SampleDescriptionIndex: eff.SampleDescriptionIndex,
 		Durations:              eff.Durations,
 		Sizes:                  eff.Sizes,

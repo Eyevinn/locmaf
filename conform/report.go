@@ -63,10 +63,11 @@ type RawInfo struct {
 
 // MoofInfo summarizes a moof-carrying Object's decoded effective values.
 type MoofInfo struct {
-	GenBoxes     []string `json:"genBoxes,omitempty"`
-	SampleCount  int      `json:"sampleCount"`
-	BMDT         uint64   `json:"bmdt"`
-	PayloadBytes int      `json:"payloadBytes"`
+	GenBoxes       []string `json:"genBoxes,omitempty"`
+	SampleCount    int      `json:"sampleCount"`
+	BMDT           uint64   `json:"bmdt"`
+	SequenceNumber uint32   `json:"sequenceNumber,omitempty"`
+	PayloadBytes   int      `json:"payloadBytes"`
 }
 
 // DumpObject is one decoded LOCMAF Object in a .locmaf file.
@@ -100,8 +101,8 @@ type ChunkResult struct {
 	// form (no normalization was needed).
 	SourceIdentical bool `json:"sourceIdentical"`
 	// Normalizations explains, box and field at a time, how the canonical
-	// form differs from the source bytes (mfhd sequence zeroed, tfdt
-	// widened, defaults folded, box reorder, data_offset recomputed, …).
+	// form differs from the source bytes (tfdt widened, defaults folded,
+	// box reorder, data_offset recomputed, …).
 	Normalizations []string `json:"normalizations,omitempty"`
 	// FirstDiff is the raw first-differing-byte window, populated only on
 	// request (the CLI's -bytes flag). Offsets can mislead once a box

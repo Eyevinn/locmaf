@@ -1,0 +1,29 @@
+{
+  "name": "seqnum-jumps",
+  "description": "mfhd sequence-number jumps and a decrease inside a group: ID 20 carries each change of step (+1, +94, +1, -51, 0)",
+  "locmafVersion": "0.3",
+  "draftCommit": "bb4c68e",
+  "groups": 1,
+  "objects": 6,
+  "files": {
+    "canonical/g000_o000.cmfc": "dcedcfd514db80d0a9f7a38af62a0fe5836e93d3747c2dc101c98a5ace44bb63",
+    "canonical/g000_o001.cmfc": "fcffb60dd7266eebe215d6cc6097d8888a1cf21ac389657fd7d4a4674d14c8cf",
+    "canonical/g000_o002.cmfc": "4470b7274efaa8f73df95add709507bdea945b9639581102a8b7f5876cfebdef",
+    "canonical/g000_o003.cmfc": "2c23c96c5bfefd2c9edf70597c3313b53ca16eb176e1be916e49c6c86a49df72",
+    "canonical/g000_o004.cmfc": "dd23c8e0369f8b286b3d69636be72dfbe30d13c81590b2e51cd0eb3c3e351bf8",
+    "canonical/g000_o005.cmfc": "da5c99c18358756bfb780481b39389d003b5314573c4d540ed2fa9141eb0ef6e",
+    "effective/g000_o000.json": "dde67fe93e1d7ad309a0267e757843e13c95fe2ab8e32952ebe13f4860fa8749",
+    "effective/g000_o001.json": "da0e63476d0ba1ff4dea747304c346cab945c336ef98736362f094b7137e3617",
+    "effective/g000_o002.json": "cb43b670cb7c2bc3d70d4a8db4f9e208161dd362f3aa3a8d6982d09015d75a70",
+    "effective/g000_o003.json": "918b60070cc52d5b1c9d2dfe41d04c2b5fcd9f2d239fe1cd79e72df214a8e956",
+    "effective/g000_o004.json": "de24dd5153a1df96787ba0acb47b5704369ea1486bafcde18c1156b8c9625058",
+    "effective/g000_o005.json": "7af690743ef7890e6d1bc58a6baf18c7b053ce135b0fd681252045cff5a0c81d",
+    "init.mp4": "4bce088e065977206147b77fe0d8994db3b20c9291b6296dc20338096ca47bfd",
+    "objects/g000_o000.locmafobj": "844fdc60a6595b851b34043fa3359e7b5d933d579043e66b2c9298bc0989bd4e",
+    "objects/g000_o001.locmafobj": "d85670c0af27893e9b15696454c4892005221022fd1e45efdf2b2c97a643438f",
+    "objects/g000_o002.locmafobj": "0f6ea5ef529100cd59a3145374ad05a4349ba1cfba8896554e48aaf184b7bbc9",
+    "objects/g000_o003.locmafobj": "deebaa1bfa0f5ac3b90b1ada716fbbdb36e223f15aa24a0fce074804b835fe18",
+    "objects/g000_o004.locmafobj": "f232ceba07fad6b41178f1de73fc1d6d4a58c9e45fe2fdc113296138dd654bf1",
+    "objects/g000_o005.locmafobj": "244dd92265f963e4975eeaf772356350d10c70ccf9bc3096bde798ec4800d492"
+  }
+}

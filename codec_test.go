@@ -82,7 +82,9 @@ func TestGoldenFullObject(t *testing.T) {
 		mkSample(3000, 800, 0x02000000, 0xAA),
 		mkSample(3000, 700, 0x01010000, 0xBB),
 	}
-	moof := makeFragment(t, 1, 90000, samples)
+	// Sequence number 0 carries no ID 18, so these bytes are the same as
+	// before the sequence number was carried.
+	moof := makeFragment(t, 0, 90000, samples)
 	payload := samplePayload(samples)
 
 	state := NewState()
@@ -606,7 +608,7 @@ func TestReconstructionParsesWithMp4ff(t *testing.T) {
 	require.NoError(t, err)
 	moofOut, ok := box.(*mp4.MoofBox)
 	require.True(t, ok, "first box is the moof")
-	require.Equal(t, uint32(0), moofOut.Mfhd.SequenceNumber)
+	require.Equal(t, uint32(1), moofOut.Mfhd.SequenceNumber, "source sequence number restored")
 	require.Equal(t, uint64(90000), moofOut.Traf.Tfdt.BaseMediaDecodeTime())
 	require.Equal(t, byte(1), moofOut.Traf.Tfdt.Version)
 	require.Len(t, moofOut.Traf.Trun.Samples, 3)

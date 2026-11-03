@@ -2,7 +2,7 @@
   "name": "per-sample-flags",
   "description": "mixed flags neither uniform nor equal-except-first: ID 7 full 32-bit list",
   "locmafVersion": "0.3",
-  "draftCommit": "6a2439a",
+  "draftCommit": "bb4c68e",
   "groups": 1,
   "objects": 2,
   "files": {

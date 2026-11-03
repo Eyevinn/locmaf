@@ -2,7 +2,7 @@
   "name": "list-grow-shrink",
   "description": "sample count 2 → 4 → 1 across deltas: list grow (absolute-as-zigzag) and shrink (truncate)",
   "locmafVersion": "0.3",
-  "draftCommit": "6a2439a",
+  "draftCommit": "bb4c68e",
   "groups": 1,
   "objects": 3,
   "files": {

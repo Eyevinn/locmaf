@@ -2,7 +2,7 @@
   "name": "varying-sizes",
   "description": "video-like varying sizes: ID 1 carries n−1 entries, the last derives from P",
   "locmafVersion": "0.3",
-  "draftCommit": "6a2439a",
+  "draftCommit": "bb4c68e",
   "groups": 1,
   "objects": 3,
   "files": {

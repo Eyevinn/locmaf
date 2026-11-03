@@ -92,7 +92,7 @@
       Seven boxes, each paying an 8-byte <code>size</code> + fourcc header — that is <strong>56 bytes</strong>.
       Four <code>version</code>/<code>flags</code> words add <strong>16 more</strong>. So
       <strong>72 of the 100 bytes carry no media information at all</strong>, and each of the six numbers
-      that remain is already known to the receiver: the sequence number is unused, the track ID comes from
+      that remain is already known to the receiver: the sequence number repeats or steps from the previous one, the track ID comes from
       the init, the sample size equals the MoQ object length, the decode time is the previous one plus the
       previous duration, the sample count is unchanged, and the data offset is implicit.
     </p>

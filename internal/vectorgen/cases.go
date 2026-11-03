@@ -17,9 +17,10 @@ import (
 )
 
 // draftCommit is the locmaf-id commit the corpus was generated against
-// (the draft-einarsson-moq-locmaf-01 tag). Bump it together with any
-// wire- or canonical-affecting draft change.
-const draftCommit = "6a2439a"
+// (main with the mfhd sequence number of Eyevinn/locmaf-id#2 and without
+// trailing boxes). Bump it together with any wire- or canonical-affecting
+// draft change.
+const draftCommit = "bb4c68e"
 
 // chunkSrc is one source chunk of a group: either a moof + mdat pair
 // (with optional genBoxes and decode-equivalent alternate moofs), or a
@@ -139,7 +140,9 @@ type sampleSpec struct {
 	fill  byte
 }
 
-// buildChunk builds a moof + patterned mdat from sample specs.
+// buildChunk builds a moof + patterned mdat from sample specs, with seq
+// as the mfhd sequence_number. Cases that do not exercise the sequence
+// number pass 0, which carries no field on the wire.
 func buildChunk(seq uint32, bmdt uint64, samples []sampleSpec) (chunkSrc, error) {
 	frag, err := mp4.CreateFragment(seq, 1)
 	if err != nil {
@@ -156,6 +159,37 @@ func buildChunk(seq uint32, bmdt uint64, samples []sampleSpec) (chunkSrc, error)
 	}
 	frag.Moof.Traf.Tfdt.SetBaseMediaDecodeTime(bmdt)
 	return chunkSrc{moof: frag.Moof, mdat: mdat}, nil
+}
+
+// audioChunk builds a uniform audio-like chunk of two 1024-tick samples
+// at chunk index idx of a case (which sets its BMDT and fill), with seq
+// as the mfhd sequence_number.
+func audioChunk(seq uint32, idx int) (chunkSrc, error) {
+	samples := make([]sampleSpec, 2)
+	for i := range samples {
+		samples[i] = sampleSpec{dur: 1024, size: 200, flags: 0x02000000, fill: byte(0x20*idx + i + 1)}
+	}
+	return buildChunk(seq, uint64(idx)*2048, samples)
+}
+
+// seqGroups builds one group per seqs entry, chunk by chunk, with
+// mk(seq, idx) where idx counts chunks across the whole case.
+func seqGroups(seqs [][]uint32, mk func(seq uint32, idx int) (chunkSrc, error)) ([][]chunkSrc, error) {
+	var groups [][]chunkSrc
+	idx := 0
+	for _, gs := range seqs {
+		var group []chunkSrc
+		for _, seq := range gs {
+			ch, err := mk(seq, idx)
+			if err != nil {
+				return nil, err
+			}
+			group = append(group, ch)
+			idx++
+		}
+		groups = append(groups, group)
+	}
+	return groups, nil
 }
 
 // videoSamples produces size-varying video-like sample specs with a
@@ -226,7 +260,7 @@ func cases() []vectorCase {
 					for i := range samples {
 						samples[i] = sampleSpec{dur: 1024, size: 200, flags: 0x02000000, fill: byte(0x30*c + i + 1)}
 					}
-					ch, err := buildChunk(uint32(c+1), uint64(c)*4096, samples)
+					ch, err := buildChunk(0, uint64(c)*4096, samples)
 					if err != nil {
 						return nil, err
 					}
@@ -245,7 +279,7 @@ func cases() []vectorCase {
 				}
 				var group []chunkSrc
 				for c := 0; c < 3; c++ {
-					ch, err := buildChunk(uint32(c+1), uint64(c)*9000, videoSamples(c, 3, c == 0))
+					ch, err := buildChunk(0, uint64(c)*9000, videoSamples(c, 3, c == 0))
 					if err != nil {
 						return nil, err
 					}
@@ -268,7 +302,7 @@ func cases() []vectorCase {
 					if c == 0 {
 						flags = 0x02000000
 					}
-					ch, err := buildChunk(uint32(c+1), uint64(c)*3000, []sampleSpec{{
+					ch, err := buildChunk(0, uint64(c)*3000, []sampleSpec{{
 						dur: 3000, size: uint32(500 + 70*c), flags: flags, fill: byte(0x40 + c),
 					}})
 					if err != nil {
@@ -297,7 +331,7 @@ func cases() []vectorCase {
 					for i := range samples {
 						samples[i].cto = ctos[c][i]
 					}
-					ch, err := buildChunk(uint32(c+1), uint64(c)*9000, samples)
+					ch, err := buildChunk(0, uint64(c)*9000, samples)
 					if err != nil {
 						return nil, err
 					}
@@ -317,7 +351,7 @@ func cases() []vectorCase {
 				sync := []bool{true, false, true}
 				var group []chunkSrc
 				for c := 0; c < 3; c++ {
-					ch, err := buildChunk(uint32(c+1), uint64(c)*9000, videoSamples(c, 3, sync[c]))
+					ch, err := buildChunk(0, uint64(c)*9000, videoSamples(c, 3, sync[c]))
 					if err != nil {
 						return nil, err
 					}
@@ -344,7 +378,7 @@ func cases() []vectorCase {
 					for i := range samples {
 						samples[i].flags = flagSets[c][i]
 					}
-					ch, err := buildChunk(uint32(c+1), uint64(c)*9000, samples)
+					ch, err := buildChunk(0, uint64(c)*9000, samples)
 					if err != nil {
 						return nil, err
 					}
@@ -365,7 +399,7 @@ func cases() []vectorCase {
 				bmdt := uint64(0)
 				var group []chunkSrc
 				for c, n := range counts {
-					ch, err := buildChunk(uint32(c+1), bmdt, videoSamples(c, n, c == 0))
+					ch, err := buildChunk(0, bmdt, videoSamples(c, n, c == 0))
 					if err != nil {
 						return nil, err
 					}
@@ -386,7 +420,7 @@ func cases() []vectorCase {
 				bmdts := []uint64{0, 9000, 900000, 909000} // jump at chunk 2
 				var group []chunkSrc
 				for c, b := range bmdts {
-					ch, err := buildChunk(uint32(c+1), b, videoSamples(c, 3, c == 0))
+					ch, err := buildChunk(0, b, videoSamples(c, 3, c == 0))
 					if err != nil {
 						return nil, err
 					}
@@ -415,7 +449,7 @@ func cases() []vectorCase {
 					if c == 0 {
 						samples[0].flags = 0x02000000
 					}
-					ch, err := buildChunk(uint32(c+1), uint64(c)*6000, samples)
+					ch, err := buildChunk(0, uint64(c)*6000, samples)
 					if err != nil {
 						return nil, err
 					}
@@ -450,7 +484,7 @@ func cases() []vectorCase {
 					for i := range samples {
 						samples[i] = sampleSpec{dur: 1024, size: 160, flags: 0x02000000, fill: byte(0x70*c + i + 1)}
 					}
-					ch, err := buildChunk(uint32(c+1), uint64(c)*4096, samples)
+					ch, err := buildChunk(0, uint64(c)*4096, samples)
 					if err != nil {
 						return nil, err
 					}
@@ -485,7 +519,7 @@ func cases() []vectorCase {
 				}, []byte("urn:x\x00v\x00")...)}
 				var group []chunkSrc
 				for c := 0; c < 2; c++ {
-					ch, err := buildChunk(uint32(c+1), uint64(c)*6000, videoSamples(c, 2, c == 0))
+					ch, err := buildChunk(0, uint64(c)*6000, videoSamples(c, 2, c == 0))
 					if err != nil {
 						return nil, err
 					}
@@ -512,13 +546,13 @@ func cases() []vectorCase {
 					samples[i] = sampleSpec{dur: 2500, size: 300, flags: 0x01010000, fill: byte(0x0A + i)}
 				}
 				samples[0].flags = 0x02000000
-				ch, err := buildChunk(1, 0, samples)
+				ch, err := buildChunk(0, 0, samples)
 				if err != nil {
 					return nil, err
 				}
 				// Alternate representation: durations and sizes ride as
 				// tfhd defaults instead of per-sample trun entries.
-				alt, err := buildChunk(1, 0, samples)
+				alt, err := buildChunk(0, 0, samples)
 				if err != nil {
 					return nil, err
 				}
@@ -545,7 +579,7 @@ func cases() []vectorCase {
 				}
 				group := []chunkSrc{{raw: initBuf.Bytes()}}
 				for c := 0; c < 2; c++ {
-					ch, err := buildChunk(uint32(c+1), uint64(c)*6000, videoSamples(c, 2, c == 0))
+					ch, err := buildChunk(0, uint64(c)*6000, videoSamples(c, 2, c == 0))
 					if err != nil {
 						return nil, err
 					}
@@ -564,7 +598,7 @@ func cases() []vectorCase {
 				}
 				var group []chunkSrc
 				for c := 0; c < 2; c++ {
-					ch, err := buildChunk(uint32(c+1), uint64(90000*c), nil)
+					ch, err := buildChunk(0, uint64(90000*c), nil)
 					if err != nil {
 						return nil, err
 					}
@@ -578,6 +612,79 @@ func cases() []vectorCase {
 					group = append(group, ch)
 				}
 				return &caseData{init: init, groups: [][]chunkSrc{group}}, nil
+			},
+		},
+		{
+			name: "seqnum-constant",
+			description: "one mfhd sequence number, the segment number, in every chunk of a group: " +
+				"ID 18 (a 5-byte vi64) in each full header, empty steady-state deltas",
+			build: func() (*caseData, error) {
+				init, err := buildInit(48000, "audio", 1024, 0, 0x02000000)
+				if err != nil {
+					return nil, err
+				}
+				groups, err := seqGroups([][]uint32{
+					{880000000, 880000000, 880000000},
+					{880000001, 880000001, 880000001},
+				}, audioChunk)
+				if err != nil {
+					return nil, err
+				}
+				return &caseData{init: init, groups: groups}, nil
+			},
+		},
+		{
+			name: "seqnum-constant-video",
+			description: "one mfhd sequence number per group on video with varying sizes and an IDR " +
+				"first sample: deltas carry the sample fields but never ID 20",
+			build: func() (*caseData, error) {
+				init, err := buildInit(90000, "video", 3000, 0, 0x01010000)
+				if err != nil {
+					return nil, err
+				}
+				groups, err := seqGroups([][]uint32{{17, 17, 17}, {18, 18, 18}},
+					func(seq uint32, idx int) (chunkSrc, error) {
+						return buildChunk(seq, uint64(idx)*9000, videoSamples(idx%3, 3, idx%3 == 0))
+					})
+				if err != nil {
+					return nil, err
+				}
+				return &caseData{init: init, groups: groups}, nil
+			},
+		},
+		{
+			name: "seqnum-increment",
+			description: "mfhd sequence number +1 per chunk across groups and through the 2^32 wrap: " +
+				"ID 18 in each full header, one ID 20 step of +1 in the first delta of each group",
+			build: func() (*caseData, error) {
+				init, err := buildInit(48000, "audio", 1024, 0, 0x02000000)
+				if err != nil {
+					return nil, err
+				}
+				groups, err := seqGroups([][]uint32{
+					{0xFFFFFFFC, 0xFFFFFFFD, 0xFFFFFFFE},
+					{0xFFFFFFFF, 0, 1},
+				}, audioChunk)
+				if err != nil {
+					return nil, err
+				}
+				return &caseData{init: init, groups: groups}, nil
+			},
+		},
+		{
+			name: "seqnum-jumps",
+			description: "mfhd sequence-number jumps and a decrease inside a group: ID 20 carries each " +
+				"change of step (+1, +94, +1, -51, 0)",
+			build: func() (*caseData, error) {
+				init, err := buildInit(48000, "audio", 1024, 0, 0x02000000)
+				if err != nil {
+					return nil, err
+				}
+				groups, err := seqGroups([][]uint32{{5, 6, 100, 101, 50, 50}}, audioChunk)
+				if err != nil {
+					return nil, err
+				}
+				return &caseData{init: init, groups: groups}, nil
 			},
 		},
 	}

@@ -2,7 +2,7 @@
   "name": "single-sample",
   "description": "one sample per chunk: sizes never on the wire (P authoritative); ID 8 sync flags deleted via ID 27",
   "locmafVersion": "0.3",
-  "draftCommit": "6a2439a",
+  "draftCommit": "bb4c68e",
   "groups": 1,
   "objects": 4,
   "files": {

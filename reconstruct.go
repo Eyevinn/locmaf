@@ -283,10 +283,10 @@ func ReconstructCanonical(moov *mp4.MoovBox, eff *EffectiveValues) ([]byte, erro
 	// moof
 	out = appendBoxHeader(out, uint32(moofSize), "moof")
 
-	// mfhd: version 0, flags 0, sequence_number 0.
+	// mfhd: version 0, flags 0, the effective sequence_number.
 	out = appendBoxHeader(out, mfhdSize, "mfhd")
 	out = appendU32(out, 0)
-	out = appendU32(out, 0)
+	out = appendU32(out, eff.SequenceNumber)
 
 	// traf
 	out = appendBoxHeader(out, uint32(trafSize), "traf")

@@ -2,7 +2,7 @@
   "name": "genboxes",
   "description": "prft and emsg boxes ride verbatim as genBox elements ahead of full and delta headers",
   "locmafVersion": "0.3",
-  "draftCommit": "6a2439a",
+  "draftCommit": "bb4c68e",
   "groups": 1,
   "objects": 2,
   "files": {

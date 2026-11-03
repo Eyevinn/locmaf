@@ -2,7 +2,7 @@
   "name": "cenc-subsamples",
   "description": "cenc-protected chunks: per-sample IVs (ID 9 overwrite) and subsample maps (IDs 11/13/15)",
   "locmafVersion": "0.3",
-  "draftCommit": "6a2439a",
+  "draftCommit": "bb4c68e",
   "groups": 1,
   "objects": 3,
   "files": {

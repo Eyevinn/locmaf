@@ -91,8 +91,12 @@ func printDumpReport(w io.Writer, r *conform.DumpReport) {
 			if len(o.Moof.GenBoxes) > 0 {
 				gb = "; genBoxes: " + strings.Join(o.Moof.GenBoxes, ", ")
 			}
-			fmt.Fprintf(w, "  #%03d %-8s %d bytes: %d sample(s), bmdt=%d, %d payload bytes%s\n",
-				o.Index, o.Kind, o.WireBytes, o.Moof.SampleCount, o.Moof.BMDT, o.Moof.PayloadBytes, gb)
+			seq := ""
+			if o.Moof.SequenceNumber != 0 {
+				seq = fmt.Sprintf(", seq=%d", o.Moof.SequenceNumber)
+			}
+			fmt.Fprintf(w, "  #%03d %-8s %d bytes: %d sample(s), bmdt=%d%s, %d payload bytes%s\n",
+				o.Index, o.Kind, o.WireBytes, o.Moof.SampleCount, o.Moof.BMDT, seq, o.Moof.PayloadBytes, gb)
 		}
 	}
 }

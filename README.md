@@ -58,7 +58,6 @@ Per fragment, asserts that canonical reconstruction straight from the
 source moof equals the encode→decode→reconstruct round trip,
 byte-identically. For a normalized fragment it explains, box and field
 at a time, how the canonical form differs from the source — e.g.
-`moof/mfhd: sequence_number 3 → 0 [SEQUENCE_ZEROED]`,
 `moof/traf/tfdt: version 0 → 1 [TFDT_WIDENED]`,
 `moof/traf/trun: per-sample sample_size list dropped [REDUNDANT_DROPPED]` —
 each tagged with its reason. (A raw byte diff would mislead here: the

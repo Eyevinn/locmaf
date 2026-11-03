@@ -2,7 +2,7 @@
   "name": "rawboxes-file",
   "description": "the .locmaf file format: a leading rawBoxes Object carries the init in-band, then normal chunks",
   "locmafVersion": "0.3",
-  "draftCommit": "6a2439a",
+  "draftCommit": "bb4c68e",
   "groups": 1,
   "objects": 3,
   "files": {

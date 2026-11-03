@@ -2,7 +2,7 @@
   "name": "strict-cmf2-pair",
   "description": "two decode-equivalent source encodings (per-sample values vs tfhd defaults) yield one canonical object",
   "locmafVersion": "0.3",
-  "draftCommit": "6a2439a",
+  "draftCommit": "bb4c68e",
   "groups": 1,
   "objects": 1,
   "representationPairs": 1,

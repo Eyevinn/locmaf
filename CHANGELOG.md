@@ -8,6 +8,20 @@ Each release notes which LOCMAF packaging version (`locmafVersion`) it implement
 
 ## [Unreleased]
 
+Still implements LOCMAF packaging version `"0.3"`: older receivers skip the new sequence-number fields and still
+decode the same samples.
+
+### Added
+
+- The `mfhd` sequence number is carried (draft field IDs 18 and 20): `EncodeCanonical` reads it, `Decode` returns it as
+  `EffectiveValues.SequenceNumber`, and `ReconstructCanonical` writes it instead of 0 (#16).
+- `testdata/vectors`: cases `seqnum-constant`, `seqnum-constant-video`, `seqnum-increment` and `seqnum-jumps`.
+
+### Changed
+
+- `EncodeCanonical` rejects a source `moof` without `mfhd`, `conform` no longer reports `SEQUENCE_ZEROED`, and
+  `locmaf dump` shows a non-zero sequence number.
+
 ### Fixed
 
 - `locmaf pack`, `locmaf align` and `conform.FragmentGenBoxes` keep the boxes before a later chunk's `moof`

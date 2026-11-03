@@ -1,0 +1,29 @@
+{
+  "name": "seqnum-constant",
+  "description": "one mfhd sequence number, the segment number, in every chunk of a group: ID 18 (a 5-byte vi64) in each full header, empty steady-state deltas",
+  "locmafVersion": "0.3",
+  "draftCommit": "bb4c68e",
+  "groups": 2,
+  "objects": 6,
+  "files": {
+    "canonical/g000_o000.cmfc": "f3dbb71ba4616f0632541c512a45db52f789455f5d790ce861816ecf63d4ae34",
+    "canonical/g000_o001.cmfc": "024c9244bc86b4295f86f0737c074c9683bfe3aa0a00fb30760dfc78f3894928",
+    "canonical/g000_o002.cmfc": "7a998366eba7ddb9f1e48ce9ac7aba88d4cf79760e0bdece377178ef6e49423f",
+    "canonical/g001_o000.cmfc": "4ebb8c3b633620e35916e7654bf9ae80368a5f42df7d7efa5f037bfbc8077f81",
+    "canonical/g001_o001.cmfc": "70d66975c8a837e8e8596b9129e8728d6f7399e8d2f927715cfbf46b94b06c7f",
+    "canonical/g001_o002.cmfc": "81601c19f22eb69ddb9993fafe04df41014d1611f4f6bb8d481cefc2264f7b4f",
+    "effective/g000_o000.json": "468b21578eeee2c93692bf8cded1fc04ababcf599163a580a0bc552abced8289",
+    "effective/g000_o001.json": "73809aaa11740bce03d0856b6673825952bb1537ab1bd37d39ecf328ca0261cb",
+    "effective/g000_o002.json": "c15d7ebea8c192a228405ffeff2c26901cd42d647cc578a21e0d8288d17a464e",
+    "effective/g001_o000.json": "830cdb605dc6a4d94093ef8f4e9379bc410812ccd50ee4a888e88eebe9fa2860",
+    "effective/g001_o001.json": "67171a970b313e5d8e27432c979d3f3b86ab48256cb7bc628c2050f467f84e3a",
+    "effective/g001_o002.json": "f0c509620b28749ba0f5ea12d6c4923c9ee7b01889737f95532b36da4ab51c03",
+    "init.mp4": "4bce088e065977206147b77fe0d8994db3b20c9291b6296dc20338096ca47bfd",
+    "objects/g000_o000.locmafobj": "d54958e09e466e4b7be203b257cb20fabeef7bbd89729e03857ee833135520cd",
+    "objects/g000_o001.locmafobj": "02e6062aa54407bb0328855e1e0689d183375999d6681b7c0275c0b484ef77f7",
+    "objects/g000_o002.locmafobj": "f501578ca8034511bbc47afb4007b4ee71c71c1d11a0bab40896e82eb62fdf85",
+    "objects/g001_o000.locmafobj": "9f9c43e45b63dbf6fdadd5100f5b66e1f069461a33bdcff90dc40ac243c9a9fa",
+    "objects/g001_o001.locmafobj": "ca842ba6a084ad5603990991bf9667dbecddaae6923ad2a462a64d2bdbcd1602",
+    "objects/g001_o002.locmafobj": "f17ffa5ec67bc4b0c513af906f95b20039104abee7195e7a81e87256bdb2dd98"
+  }
+}

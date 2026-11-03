@@ -13,6 +13,7 @@ import (
 // moofs yield the same emitted fields.
 type sourceValues struct {
 	n     int
+	seq   uint32
 	bmdt  uint64
 	sdix  uint32
 	durs  []uint32
@@ -72,6 +73,9 @@ func extractSourceValues(moof *mp4.MoofBox, moov *mp4.MoovBox) (*sourceValues, e
 			return nil, fmt.Errorf("traf child %q is outside the LOCMAF model: %w", child.Type(), ErrBadSource)
 		}
 	}
+	if moof.Mfhd == nil {
+		return nil, fmt.Errorf("moof lacks mfhd: %w", ErrBadSource)
+	}
 	trun, tfhd, tfdt := traf.Trun, traf.Tfhd, traf.Tfdt
 	if trun == nil || tfhd == nil || tfdt == nil {
 		return nil, fmt.Errorf("traf lacks trun, tfhd, or tfdt: %w", ErrBadSource)
@@ -84,6 +88,7 @@ func extractSourceValues(moof *mp4.MoofBox, moov *mp4.MoovBox) (*sourceValues, e
 
 	sv := &sourceValues{
 		n:    len(trun.Samples),
+		seq:  moof.Mfhd.SequenceNumber,
 		bmdt: tfdt.BaseMediaDecodeTime(),
 	}
 
@@ -189,6 +194,7 @@ func ExtractEffective(genBoxes []GenBox, moof *mp4.MoofBox, mdatPayload []byte,
 		SampleCount:            sv.n,
 		BMDT:                   sv.bmdt,
 		SampleDescriptionIndex: sv.sdix,
+		SequenceNumber:         sv.seq,
 		Durations:              sv.durs,
 		Sizes:                  sv.sizes,
 		Flags:                  sv.flags,
@@ -257,6 +263,9 @@ func emitFields(sv *sourceValues, moov *mp4.MoovBox) (*chunkFields, error) {
 	trex := moov.Mvex.Trex
 	cf := newChunkFields()
 
+	// The sequence number rides outside the field maps: ID 18 in a full
+	// header when non-zero, the ID 20 step in a delta header.
+	cf.seq = sv.seq
 	cf.scalars[idTrunSampleCount] = uint64(sv.n)
 	cf.scalars[idTfdtBaseMediaDecodeTime] = sv.bmdt
 

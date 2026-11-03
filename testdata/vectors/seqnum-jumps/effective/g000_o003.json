@@ -1,0 +1,24 @@
+{
+  "sampleCount": 2,
+  "bmdt": 6144,
+  "sequenceNumber": 101,
+  "sampleDescriptionIndex": 1,
+  "durations": [
+    1024,
+    1024
+  ],
+  "sizes": [
+    200,
+    200
+  ],
+  "flags": [
+    33554432,
+    33554432
+  ],
+  "ctos": [
+    0,
+    0
+  ],
+  "mdatLength": 400,
+  "mdatSha256": "71463cd5ec5ccc9b8e3404ce90c2b368964559c7f31a6f7732316b859fce7e87"
+}

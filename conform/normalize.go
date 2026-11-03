@@ -71,10 +71,6 @@ func boxDiff(src, canon []byte) []string {
 
 func moofNorms(s, c *mp4.MoofBox, moov *mp4.MoovBox) []string {
 	var out []string
-	if s.Mfhd != nil && c.Mfhd != nil && s.Mfhd.SequenceNumber != c.Mfhd.SequenceNumber {
-		out = append(out, fmt.Sprintf("moof/mfhd: sequence_number %d → %d [SEQUENCE_ZEROED]",
-			s.Mfhd.SequenceNumber, c.Mfhd.SequenceNumber))
-	}
 	st, ct := s.Traf, c.Traf
 	if st == nil || ct == nil {
 		return out

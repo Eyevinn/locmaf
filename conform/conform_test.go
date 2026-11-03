@@ -150,7 +150,7 @@ func TestAlign(t *testing.T) {
 	}
 	require.NotEmpty(t, norms, "expected a chunk with normalizations")
 	joined := strings.Join(norms, "\n")
-	require.Contains(t, joined, "moof/mfhd: sequence_number")
+	require.NotContains(t, joined, "mfhd", "the canonical form keeps the source sequence number")
 	require.Contains(t, joined, "moof/traf/tfdt: version 0 → 1")
 	require.Contains(t, joined, "data_offset")
 	require.Contains(t, joined, "mdat: payload identical")
@@ -246,11 +246,12 @@ func TestDump(t *testing.T) {
 	require.Equal(t, []uint64{0, 9000, 18000, 27000}, bmdts)
 }
 
-// TestVerifyCorpus frames each golden-vector case (in-band init + its
-// objects) into a .locmaf stream and checks every Object verifies as
-// canonical. The corpus is the reference codec's own output, so this
-// guards that Verify's canonical check accepts exactly what the encoder
-// produces.
+// TestVerifyCorpus frames each group of each golden-vector case (in-band
+// init + the group's objects) into a .locmaf stream and checks every
+// Object verifies as canonical. The corpus is the reference codec's own
+// output, so this guards that Verify's canonical check accepts exactly
+// what the encoder produces. A .locmaf stream is one group, so a case
+// with several groups is verified one group at a time.
 func TestVerifyCorpus(t *testing.T) {
 	root := filepath.Join("..", "testdata", "vectors")
 	entries, err := os.ReadDir(root)
@@ -269,24 +270,30 @@ func TestVerifyCorpus(t *testing.T) {
 		}
 		ran++
 		t.Run(e.Name(), func(t *testing.T) {
-			st := locmaf.NewState()
-			initObj, err := locmaf.EncodeRaw(initBytes, st)
+			initObj, err := locmaf.EncodeRaw(initBytes, locmaf.NewState())
 			require.NoError(t, err)
-			stream := locmaf.AppendFramed(nil, initObj)
 
 			objPaths, err := filepath.Glob(filepath.Join(caseDir, "objects", "*.locmafobj"))
 			require.NoError(t, err)
 			require.NotEmpty(t, objPaths)
-			sort.Strings(objPaths)
+			groups := map[string][]string{} // "g000" → that group's object paths
 			for _, p := range objPaths {
-				b, err := os.ReadFile(p)
-				require.NoError(t, err)
-				stream = locmaf.AppendFramed(stream, b)
+				g, _, _ := strings.Cut(filepath.Base(p), "_")
+				groups[g] = append(groups[g], p)
 			}
-			rep, err := conform.Verify(stream, nil, true)
-			require.NoError(t, err)
-			require.Zero(t, rep.NonConformant, "%s: non-conformant objects", e.Name())
-			require.Equal(t, len(objPaths)+1, rep.Conformant)
+			for g, paths := range groups {
+				sort.Strings(paths)
+				stream := locmaf.AppendFramed(nil, initObj)
+				for _, p := range paths {
+					b, err := os.ReadFile(p)
+					require.NoError(t, err)
+					stream = locmaf.AppendFramed(stream, b)
+				}
+				rep, err := conform.Verify(stream, nil, true)
+				require.NoError(t, err)
+				require.Zero(t, rep.NonConformant, "%s %s: non-conformant objects", e.Name(), g)
+				require.Equal(t, len(paths)+1, rep.Conformant, "%s %s", e.Name(), g)
+			}
 		})
 	}
 	require.Positive(t, ran, "no corpus cases found under %s", root)

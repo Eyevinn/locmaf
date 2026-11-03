@@ -2,7 +2,7 @@
   "name": "bmdt-reanchor",
   "description": "a BMDT discontinuity mid-group re-anchors with a full header",
   "locmafVersion": "0.3",
-  "draftCommit": "6a2439a",
+  "draftCommit": "bb4c68e",
   "groups": 1,
   "objects": 4,
   "files": {

@@ -75,7 +75,8 @@ func Dump(data, initBytes []byte) (*DumpReport, error) {
 			report.Objects = append(report.Objects, rec)
 			continue
 		}
-		mi := &MoofInfo{SampleCount: eff.SampleCount, BMDT: eff.BMDT, PayloadBytes: len(eff.MdatPayload)}
+		mi := &MoofInfo{SampleCount: eff.SampleCount, BMDT: eff.BMDT,
+			SequenceNumber: eff.SequenceNumber, PayloadBytes: len(eff.MdatPayload)}
 		for _, gb := range eff.GenBoxes {
 			mi.GenBoxes = append(mi.GenBoxes, gb.Name)
 		}

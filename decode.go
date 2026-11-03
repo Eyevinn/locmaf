@@ -222,7 +222,8 @@ func known(id fieldID) bool {
 	return isKnownScalar(id) || isKnownVarintList(id) ||
 		id == idTrunSampleCompositionTimeOffsets ||
 		id == idSencInitializationVector ||
-		id == idDeltaDeletedLocmafIDs
+		id == idDeltaDeletedLocmafIDs ||
+		id == idMfhdSequenceNumber || id == idMfhdSequenceNumberStep
 }
 
 func parseScalar(raw []byte, id fieldID) (uint64, error) {
@@ -271,7 +272,20 @@ func applyFullProperties(props []byte) (*chunkFields, error) {
 	if _, ok := raw[idDeltaDeletedLocmafIDs]; ok {
 		return nil, fmt.Errorf("field 27 in a full header: %w", ErrMalformed)
 	}
+	if _, ok := raw[idMfhdSequenceNumberStep]; ok {
+		return nil, fmt.Errorf("field 20 in a full header: %w", ErrMalformed)
+	}
 	cf := newChunkFields()
+	if bytes, ok := raw[idMfhdSequenceNumber]; ok {
+		v, err := parseScalar(bytes, idMfhdSequenceNumber)
+		if err != nil {
+			return nil, err
+		}
+		if v > 0xFFFFFFFF {
+			return nil, fmt.Errorf("sequence number %d overflows 32 bits: %w", v, ErrMalformed)
+		}
+		cf.seq = uint32(v)
+	}
 	for id, bytes := range raw {
 		switch {
 		case isKnownScalar(id):
@@ -306,8 +320,8 @@ func applyFullProperties(props []byte) (*chunkFields, error) {
 }
 
 // applyDeltaProperties applies a delta header to the in-group
-// reference: deletions first, then per-field deltas; the BMDT is always
-// derived.
+// reference: deletions first, then per-field deltas; the BMDT and the
+// sequence number are always derived.
 func applyDeltaProperties(props []byte, prev *State, trexDefaultDur uint32) (*chunkFields, error) {
 	raw, err := rawProperties(props)
 	if err != nil {
@@ -315,6 +329,9 @@ func applyDeltaProperties(props []byte, prev *State, trexDefaultDur uint32) (*ch
 	}
 	if _, ok := raw[idTfdtBaseMediaDecodeTime]; ok {
 		return nil, fmt.Errorf("field 10 in a delta header: %w", ErrMalformed)
+	}
+	if _, ok := raw[idMfhdSequenceNumber]; ok {
+		return nil, fmt.Errorf("field 18 in a delta header: %w", ErrMalformed)
 	}
 
 	cf := prev.snapshot()
@@ -331,9 +348,32 @@ func applyDeltaProperties(props []byte, prev *State, trexDefaultDur uint32) (*ch
 			delete(cf.lists, id)
 			delete(cf.signedLists, id)
 			delete(cf.rawBlobs, id)
+			if id == idMfhdSequenceNumberStep {
+				cf.step = 0 // absence and 0 are the same step state
+			}
 		}
 		delete(raw, idDeltaDeletedLocmafIDs)
 	}
+
+	// The step is a signed delta-coded scalar; the sequence number is
+	// the previous one plus the step, modulo 2^32.
+	if bytes, ok := raw[idMfhdSequenceNumberStep]; ok {
+		d, _, err := vi64.ParseZigzag(bytes)
+		if err != nil {
+			return nil, fmt.Errorf("invalid delta scalar id %d: %w", idMfhdSequenceNumberStep, ErrMalformed)
+		}
+		// Bound d first so the sum cannot overflow int64; any valid
+		// step change lies well inside this range.
+		if d < -(1<<32) || d > 1<<32 {
+			return nil, fmt.Errorf("sequence-number step delta %d out of range: %w", d, ErrMalformed)
+		}
+		cf.step += d
+		delete(raw, idMfhdSequenceNumberStep)
+	}
+	if cf.step < -(1<<31) || cf.step > (1<<31)-1 {
+		return nil, fmt.Errorf("sequence-number step %d outside the signed 32-bit range: %w", cf.step, ErrMalformed)
+	}
+	cf.seq = prev.seq + uint32(cf.step)
 
 	// Scalars, with sample count first so list lengths are known.
 	applyScalarDelta := func(id fieldID) error {
@@ -515,10 +555,11 @@ func expandEffective(cf *chunkFields, genBoxes []GenBox, mdat []byte, moov *mp4.
 	}
 
 	eff := &EffectiveValues{
-		SampleCount: n,
-		BMDT:        bmdt,
-		GenBoxes:    genBoxes,
-		MdatPayload: mdat,
+		SampleCount:    n,
+		BMDT:           bmdt,
+		SequenceNumber: cf.seq,
+		GenBoxes:       genBoxes,
+		MdatPayload:    mdat,
 	}
 
 	eff.SampleDescriptionIndex = trex.DefaultSampleDescriptionIndex

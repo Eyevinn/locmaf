@@ -41,6 +41,8 @@ const (
 	idTrunFirstSampleFlags       fieldID = 12
 	idTrunSampleCount            fieldID = 14
 	idSencPerSampleIVSize        fieldID = 16
+	idMfhdSequenceNumber         fieldID = 18 // full-header-only
+	idMfhdSequenceNumberStep     fieldID = 20 // delta-header-only, signed
 
 	// List / raw fields (odd IDs).
 	idTrunSampleSizes                  fieldID = 1
@@ -93,13 +95,18 @@ type GenBox struct {
 }
 
 // EffectiveValues is a decoded chunk's meaning: the per-sample vectors
-// after applying deltas, deletions, and the sample-size and BMDT
-// derivations. It is the only chunk-derived input to
+// after applying deltas, deletions, and the sample-size, BMDT, and
+// sequence-number derivations. It is the only chunk-derived input to
 // ReconstructCanonical; the remaining inputs come from the CMAF Header.
 type EffectiveValues struct {
 	SampleCount            int
 	BMDT                   uint64
 	SampleDescriptionIndex uint32
+
+	// SequenceNumber is the mfhd sequence_number: absolute in a full
+	// chunk (0 when not carried), derived through the step in a delta
+	// chunk.
+	SequenceNumber uint32
 
 	// Per-sample vectors, each SampleCount long.
 	Durations []uint32
@@ -134,8 +141,24 @@ type State struct {
 	lists       map[fieldID][]uint64
 	signedLists map[fieldID][]int64
 	rawBlobs    map[fieldID][]byte
-	hasAny      bool
+	seqState
+	hasAny bool
 }
+
+// seqState is the mfhd sequence-number part of the in-group reference.
+// It lives outside the field maps because neither value follows the
+// generic rules: the sequence number (ID 18) is full-header-only and
+// derived in delta chunks, and the step (ID 20) is a signed,
+// delta-only scalar for which absence and 0 are the same state.
+type seqState struct {
+	seq  uint32 // the chunk's effective sequence number
+	step int64  // seq minus the previous chunk's, in [-2^31, 2^31-1]
+}
+
+// seqStep is the step from prev to cur: their difference modulo 2^32,
+// taken into the signed 32-bit range, so a wrap from 0xFFFFFFFF to 0 is
+// +1.
+func seqStep(prev, cur uint32) int64 { return int64(int32(cur - prev)) }
 
 // NewState returns an empty State.
 func NewState() *State {
@@ -151,6 +174,7 @@ func (s *State) Reset() {
 	s.lists = make(map[fieldID][]uint64)
 	s.signedLists = make(map[fieldID][]int64)
 	s.rawBlobs = make(map[fieldID][]byte)
+	s.seqState = seqState{}
 	s.hasAny = false
 }
 
@@ -163,6 +187,7 @@ type chunkFields struct {
 	lists       map[fieldID][]uint64
 	signedLists map[fieldID][]int64
 	rawBlobs    map[fieldID][]byte
+	seqState
 }
 
 func newChunkFields() *chunkFields {
@@ -192,6 +217,7 @@ func (s *State) store(cf *chunkFields) {
 	for k, v := range cf.rawBlobs {
 		s.rawBlobs[k] = append([]byte(nil), v...)
 	}
+	s.seqState = cf.seqState
 	s.hasAny = true
 }
 
@@ -211,6 +237,7 @@ func (s *State) snapshot() *chunkFields {
 	for k, v := range s.rawBlobs {
 		cf.rawBlobs[k] = append([]byte(nil), v...)
 	}
+	cf.seqState = s.seqState
 	return cf
 }
 

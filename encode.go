@@ -57,6 +57,7 @@ func EncodeCanonical(genBoxes []GenBox, moof *mp4.MoofBox, mdatPayload []byte,
 		props = encodeFullProperties(cf)
 	} else {
 		elementType = ElementTypeDeltaHeader
+		cf.step = seqStep(prev.seq, cf.seq)
 		props = encodeDeltaProperties(cf, prev)
 	}
 
@@ -130,9 +131,12 @@ func frameProperties(entries []propertyEntry) []byte {
 }
 
 // encodeFullProperties emits every represented field with its absolute
-// value encoding.
+// value encoding, plus the sequence number when it is not 0.
 func encodeFullProperties(cf *chunkFields) []byte {
 	var entries []propertyEntry
+	if cf.seq != 0 {
+		entries = append(entries, propertyEntry{idMfhdSequenceNumber, vi64.Append(nil, uint64(cf.seq))})
+	}
 	for id, v := range cf.scalars {
 		entries = append(entries, propertyEntry{id, vi64.Append(nil, v)})
 	}
@@ -159,9 +163,14 @@ func encodeFullProperties(cf *chunkFields) []byte {
 // encodeDeltaProperties emits exactly the fields whose represented
 // values changed from the in-group reference, plus the deletion marker
 // for fields that left it. Scalar and list elements are zigzag deltas
-// (missing previous entries count as 0); raw bytes overwrite.
+// (missing previous entries count as 0); raw bytes overwrite. The
+// sequence number itself is never sent: its step is, whenever the step
+// changes, and only ever as a delta (never through the deletion marker).
 func encodeDeltaProperties(cf *chunkFields, prev *State) []byte {
 	var entries []propertyEntry
+	if cf.step != prev.step {
+		entries = append(entries, propertyEntry{idMfhdSequenceNumberStep, vi64.AppendZigzag(nil, cf.step-prev.step)})
+	}
 
 	for id, v := range cf.scalars {
 		prevV, prevHas := prev.scalars[id]

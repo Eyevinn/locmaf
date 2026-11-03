@@ -2,7 +2,7 @@
   "name": "first-sample-flags",
   "description": "sync-led chunks: ID 12 emitted, then deleted via ID 27, then re-introduced by delta",
   "locmafVersion": "0.3",
-  "draftCommit": "6a2439a",
+  "draftCommit": "bb4c68e",
   "groups": 1,
   "objects": 3,
   "files": {

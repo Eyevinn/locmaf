@@ -15,6 +15,8 @@ Each release notes which LOCMAF packaging version (`locmafVersion`) it implement
 - `testdata/vectors`: every `init.mp4` is a complete CMAF header, every video group starts with a sync sample, `genboxes`
   has a delta header as described, and `negative-ctos` has no repeated presentation times. The objects of `varying-sizes`,
   `list-grow-shrink`, `bmdt-reanchor`, `strict-cmf2-pair`, `genboxes` and `negative-ctos` change.
+- `locmaf pack`, `locmaf align` and `conform.LoadCMAF` reject a box after a segment's last `mdat`
+  (`conform.ErrTrailingBox`), which LOCMAF does not carry, instead of silently dropping it.
 
 ## [0.2.1] - 2026-08-29
 

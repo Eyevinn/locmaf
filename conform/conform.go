@@ -18,6 +18,11 @@ var (
 	ErrNoMoov        = errors.New("no moov")
 	ErrMisaligned    = errors.New("direct and round-trip canonical bytes differ")
 	ErrShortBox      = errors.New("box shorter than a header")
+	// ErrTrailingBox is a box after the last mdat of a segment, which
+	// precedes no moof, so LOCMAF does not carry it. A box that covers
+	// a whole segment goes before the moof of its last chunk instead.
+	ErrTrailingBox = errors.New("box after the last mdat of a segment is not carried by LOCMAF; " +
+		"place it before the moof of the segment's last chunk")
 )
 
 // LoadedCMAF is a parsed fragmented CMAF input with its init resolved:
@@ -43,6 +48,9 @@ func LoadCMAF(raw, initBytes []byte) (*LoadedCMAF, error) {
 	if len(f.Segments) == 0 {
 		return nil, ErrNotFragmented
 	}
+	if err := checkTrailingBoxes(f); err != nil {
+		return nil, err
+	}
 	starts := ChunkStarts(f, uint64(len(raw)))
 
 	moov := f.Moov
@@ -62,6 +70,24 @@ func LoadCMAF(raw, initBytes []byte) (*LoadedCMAF, error) {
 		return nil, fmt.Errorf("parse init: %w", err)
 	}
 	return &LoadedCMAF{Raw: raw, File: f, Moov: m, InitBytes: initBytes, Starts: starts}, nil
+}
+
+// checkTrailingBoxes rejects a box after the last mdat of a segment.
+// mp4ff attaches a box before a moof to that moof's fragment, so a box
+// after an mdat is a child of a fragment only when no moof of the same
+// segment follows it.
+func checkTrailingBoxes(f *mp4.File) error {
+	for s, seg := range f.Segments {
+		for _, frag := range seg.Fragments {
+			for i, child := range frag.Children {
+				if child.Type() != "mdat" || i+1 == len(frag.Children) {
+					continue
+				}
+				return fmt.Errorf("segment %d: %s: %w", s, frag.Children[i+1].Type(), ErrTrailingBox)
+			}
+		}
+	}
+	return nil
 }
 
 // MoovFromBytes parses an init segment (ftyp+moov, or a bare moov) from a

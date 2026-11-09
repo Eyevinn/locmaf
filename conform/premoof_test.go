@@ -205,3 +205,44 @@ func TestPreMoofBoxes(t *testing.T) {
 		})
 	}
 }
+
+// TestTrailingBoxRejected checks that LoadCMAF rejects a box after the
+// last mdat of a segment, whether the file ends there or a new segment
+// follows, since LOCMAF does not carry it. Before the moof of the last
+// chunk, where a segment-wide box such as a C2PA uuid box goes instead,
+// the box is a genBox of that chunk.
+func TestTrailingBoxRejected(t *testing.T) {
+	sig := uuidBox(9)
+	oneSegment := preMoofCMAF(t, [][][]byte{nil, nil})
+
+	t.Run("after the file's last mdat", func(t *testing.T) {
+		_, err := conform.LoadCMAF(append(bytes.Clone(oneSegment), sig...), nil)
+		require.ErrorIs(t, err, conform.ErrTrailingBox)
+	})
+
+	t.Run("before the next segment's styp", func(t *testing.T) {
+		var next bytes.Buffer
+		require.NoError(t, mp4.CreateStyp().Encode(&next))
+		frag, err := mp4.CreateFragment(3, 1)
+		require.NoError(t, err)
+		frag.AddFullSample(mp4.FullSample{
+			Sample: mp4.Sample{Dur: 3000, Size: 10, Flags: 0x02000000},
+			Data:   make([]byte, 10),
+		})
+		frag.Moof.Traf.Tfdt.SetBaseMediaDecodeTime(18000)
+		require.NoError(t, frag.Encode(&next))
+		data := append(append(bytes.Clone(oneSegment), sig...), next.Bytes()...)
+		_, err = conform.LoadCMAF(data, nil)
+		require.ErrorIs(t, err, conform.ErrTrailingBox)
+	})
+
+	t.Run("before the last chunk's moof", func(t *testing.T) {
+		lc, err := conform.LoadCMAF(preMoofCMAF(t, [][][]byte{nil, {sig}}), nil)
+		require.NoError(t, err)
+		seg := lc.File.Segments[0]
+		gbs, err := conform.FragmentGenBoxes(seg, 1, seg.Fragments[1])
+		require.NoError(t, err)
+		require.Len(t, gbs, 1)
+		require.Equal(t, "uuid", gbs[0].Name)
+	})
+}

@@ -8,7 +8,10 @@ Each release notes which LOCMAF packaging version (`locmafVersion`) it implement
 
 ## [Unreleased]
 
-_Nothing yet._
+### Fixed
+
+- `locmaf pack`, `locmaf align` and `conform.FragmentGenBoxes` keep the boxes before a later chunk's `moof`
+  (`emsg`, `prft`, `uuid`, ...) as genBoxes of that chunk, and a `prft` before the first one, by moving to mp4ff v0.62.0 (#11).
 
 ## [0.2.1] - 2026-08-29
 

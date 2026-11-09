@@ -50,9 +50,11 @@ type vectorCase struct {
 }
 
 // buildInit builds a single-track init segment with the given trex
-// defaults.
+// defaults. The ftyp is set explicitly, so that the corpus does not
+// change with the ftyp that mp4ff's CreateEmptyInit writes by default.
 func buildInit(timescale uint32, mediaType string, defDur, defSize, defFlags uint32) *mp4.InitSegment {
 	init := mp4.CreateEmptyInit()
+	init.SetFtyp(mp4.NewFtyp("cmfc", 0, []string{"dash", "iso6"}))
 	init.AddEmptyTrack(timescale, mediaType, "und")
 	init.Moov.Mvex.Trex.DefaultSampleDuration = defDur
 	init.Moov.Mvex.Trex.DefaultSampleSize = defSize

@@ -14,7 +14,10 @@ import (
 	"github.com/Eyevinn/locmaf"
 )
 
-var errPairDiverged = errors.New("alternate source encodes differently")
+var (
+	errPairDiverged     = errors.New("alternate source encodes differently")
+	errUnknownMediaType = errors.New("unknown media type")
+)
 
 // Manifest describes one vector case directory.
 type Manifest struct {

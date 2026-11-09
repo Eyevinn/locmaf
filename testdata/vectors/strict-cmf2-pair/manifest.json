@@ -7,9 +7,9 @@
   "objects": 1,
   "representationPairs": 1,
   "files": {
-    "canonical/g000_o000.cmfc": "3795d938bc3dc7e3e4bdb0416e421837dabee718cf45baccdcb4e69f183a9a76",
-    "effective/g000_o000.json": "33b625432875f4e8c2a076032eed2d8805ce2b2245d2312a8b8a85f655dc509f",
-    "init.mp4": "837edbacc52571ac324d828de79711a3336e95ccaaaf67dc2439823a10d76a03",
-    "objects/g000_o000.locmafobj": "35a9733a6ce005140c15f48cb10bc01e82f7fbf2f692cabf22fbe3b4e0378b94"
+    "canonical/g000_o000.cmfc": "db6e60a4ade53b045107c4a98b97d76389f513693c93e569eeeff7d49a91f005",
+    "effective/g000_o000.json": "a2328618ab70104cf0a5bb6ff03958690ea5eb2334e0e13bcf37b35a987b0e28",
+    "init.mp4": "7687cd75458963205546acc3ae5ecdce319a2a04164204de5034c06528441230",
+    "objects/g000_o000.locmafobj": "1fef81840ffe89869fc0217e34315ce5712d6c578900b6b894a333841c95e28b"
   }
 }

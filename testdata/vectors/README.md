@@ -29,6 +29,24 @@ index within that group.
 | `effective/gNNN_oNNN.json` | The decoded effective values (sample durations, sizes, flags, CTOs, CENC aux, gen boxes). |
 | `file.locmaf` | *(select cases)* The self-framed, self-contained file: vi64 length-prefixed Objects led by an in-band `rawBoxes` init. |
 
+## Media
+
+The CMAF headers are real ones: H.264 (`avc1`, 640x360) for video,
+AAC-LC (`mp4a`) for audio, and a `urim` timed metadata sample entry
+with `urn:mpeg:dash:event:2012` for `event-only`. The encrypted cases have a
+complete `sinf` (`frma`, `schm`, `tenc`), and segments have the CMAF
+structure, so CMAF and ISOBMFF checkers can check the corpus.
+
+The sample payloads are not media. Each sample is one fill byte
+repeated to its size, so that a case can choose the exact sizes,
+flags and composition offsets for the wire feature it tests. No
+decoder can decode them, and a checker that parses samples will
+reject them.
+
+Two cases depart from CMAF on purpose: `bmdt-reanchor` jumps in
+decode time within a group, and `event-only` has chunks without
+samples.
+
 ## Cases
 
 14 cases, 38 objects; 1 case emits a self-framed `file.locmaf`.

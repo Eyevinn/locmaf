@@ -81,6 +81,25 @@ func corpusReadme(summaries []caseSummary) []byte {
 	fmt.Fprintf(&b, "| `file.locmaf` | *(select cases)* The self-framed, self-contained file: "+
 		"vi64 length-prefixed Objects led by an in-band `rawBoxes` init. |\n\n")
 
+	fmt.Fprintf(&b, "## Media\n\n")
+	fmt.Fprintf(&b,
+		"The CMAF headers are real ones: H.264 (`avc1`, 640x360) for video,\n"+
+			"AAC-LC (`mp4a`) for audio, and a `urim` timed metadata sample entry\n"+
+			"with `%s` for `event-only`. The encrypted cases have a\n"+
+			"complete `sinf` (`frma`, `schm`, `tenc`), and segments have the CMAF\n"+
+			"structure, so CMAF and ISOBMFF checkers can check the corpus.\n\n",
+		eventSchemeURN)
+	fmt.Fprintf(&b,
+		"The sample payloads are not media. Each sample is one fill byte\n"+
+			"repeated to its size, so that a case can choose the exact sizes,\n"+
+			"flags and composition offsets for the wire feature it tests. No\n"+
+			"decoder can decode them, and a checker that parses samples will\n"+
+			"reject them.\n\n")
+	fmt.Fprintf(&b,
+		"Two cases depart from CMAF on purpose: `bmdt-reanchor` jumps in\n"+
+			"decode time within a group, and `event-only` has chunks without\n"+
+			"samples.\n\n")
+
 	locmafClause := fmt.Sprintf("%d cases emit", filesWithLocmaf)
 	if filesWithLocmaf == 1 {
 		locmafClause = "1 case emits"

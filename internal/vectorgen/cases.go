@@ -7,9 +7,12 @@ package vectorgen
 
 import (
 	"bytes"
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/Eyevinn/locmaf"
+	"github.com/Eyevinn/mp4ff/aac"
 	"github.com/Eyevinn/mp4ff/mp4"
 )
 
@@ -49,40 +52,81 @@ type vectorCase struct {
 	build       func() (*caseData, error)
 }
 
-// buildInit builds a single-track init segment with the given trex
-// defaults. The ftyp is set explicitly, so that the corpus does not
-// change with the ftyp that mp4ff's CreateEmptyInit writes by default.
-func buildInit(timescale uint32, mediaType string, defDur, defSize, defFlags uint32) *mp4.InitSegment {
+// AVC parameter sets of the video sample entry: High profile, level 3.0,
+// 640x360. The sample payloads are patterned filler, not AVC, but the
+// CMAF header is a real one.
+var (
+	videoSPS = mustHex("6764001eacd940a02ff9610000030001000003003c8f162d96")
+	videoPPS = mustHex("68ebecb22c")
+)
+
+// eventSchemeURN names the scheme of the event-only track's URIMetaSampleEntry,
+// the DASH event message scheme that DASH-IF Ingest recommends for timed
+// metadata tracks with emsg boxes.
+const eventSchemeURN = "urn:mpeg:dash:event:2012"
+
+func mustHex(s string) []byte {
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+// buildInit builds a single-track CMAF header with the given trex
+// defaults and a sample entry for the media type: avc1 for video, AAC-LC
+// mp4a for audio, and urim for meta. The ftyp is set explicitly, so that
+// the corpus does not change with the ftyp that mp4ff writes by default.
+func buildInit(timescale uint32, mediaType string, defDur, defSize, defFlags uint32) (*mp4.InitSegment, error) {
 	init := mp4.CreateEmptyInit()
-	init.SetFtyp(mp4.NewFtyp("cmfc", 0, []string{"dash", "iso6"}))
-	init.AddEmptyTrack(timescale, mediaType, "und")
+	init.SetFtyp(mp4.NewFtyp("cmfc", 0, []string{"cmfc", "iso6"}))
+	trak := init.AddEmptyTrack(timescale, mediaType, "und")
+	switch mediaType {
+	case "video":
+		if err := trak.SetAVCDescriptor("avc1", [][]byte{videoSPS}, [][]byte{videoPPS}, true); err != nil {
+			return nil, fmt.Errorf("avc1 sample entry: %w", err)
+		}
+	case "audio":
+		if err := trak.SetAACDescriptor(aac.AAClc, int(timescale)); err != nil {
+			return nil, fmt.Errorf("mp4a sample entry: %w", err)
+		}
+	case "meta":
+		trak.Mdia.Minf.Stbl.Stsd.AddChild(urimSampleEntry(eventSchemeURN))
+	default:
+		return nil, fmt.Errorf("%w %q", errUnknownMediaType, mediaType)
+	}
 	init.Moov.Mvex.Trex.DefaultSampleDuration = defDur
 	init.Moov.Mvex.Trex.DefaultSampleSize = defSize
 	init.Moov.Mvex.Trex.DefaultSampleFlags = defFlags
-	return init
+	return init, nil
 }
 
-// addTenc marks the init's single track as protected: per-sample IV
-// size for cenc-style schemes, or a constant IV for cbcs.
-func addTenc(init *mp4.InitSegment, perSampleIVSize byte, constantIV []byte) {
-	tenc := &mp4.TencBox{
-		DefaultIsProtected:     1,
-		DefaultPerSampleIVSize: perSampleIVSize,
-		DefaultConstantIV:      constantIV,
-		// DefaultKID is a slice: it must be allocated to its 16 bytes,
-		// or Encode writes a truncated tenc (Size still counts 16).
-		DefaultKID: make(mp4.UUID, 16),
+// urimSampleEntry builds a URIMetaSampleEntry (urim) whose URIBox (uri)
+// holds uri. mp4ff has no type for it, so it is written as raw bytes:
+// the sample entry header with data_reference_index 1, then the URIBox,
+// a FullBox with a null-terminated string.
+func urimSampleEntry(uri string) mp4.Box {
+	uriPayload := append([]byte{0, 0, 0, 0}, append([]byte(uri), 0)...)
+	payload := []byte{0, 0, 0, 0, 0, 0, 0, 1}
+	payload = binary.BigEndian.AppendUint32(payload, uint32(8+len(uriPayload)))
+	payload = append(payload, "uri "...)
+	payload = append(payload, uriPayload...)
+	return mp4.CreateUnknownBox("urim", uint64(8+len(payload)), payload)
+}
+
+// protect marks the init's single track as protected with mp4ff's
+// InitProtect: the sample entry becomes encv or enca, with a sinf of frma,
+// schm and schi/tenc. For cenc, iv sets the per-sample IV size; for cbcs,
+// it is the constant IV. The KID is 01 02 ... 10.
+func protect(init *mp4.InitSegment, scheme string, iv []byte) error {
+	kid := make(mp4.UUID, 16)
+	for i := range kid {
+		kid[i] = byte(i + 1)
 	}
-	for i := range tenc.DefaultKID {
-		tenc.DefaultKID[i] = byte(i + 1)
+	if _, err := mp4.InitProtect(init, make([]byte, 16), iv, scheme, kid, nil); err != nil {
+		return fmt.Errorf("protect init: %w", err)
 	}
-	vse := mp4.NewVisualSampleEntryBox("encv")
-	sinf := &mp4.SinfBox{}
-	schi := &mp4.SchiBox{}
-	schi.AddChild(tenc)
-	sinf.AddChild(schi)
-	vse.AddChild(sinf)
-	init.Moov.Trak.Mdia.Minf.Stbl.Stsd.AddChild(vse)
+	return nil
 }
 
 // sampleSpec is one sample: duration, size, flags, cto, and a fill byte
@@ -172,7 +216,10 @@ func cases() []vectorCase {
 			name:        "uniform",
 			description: "audio-like uniform durations and sizes: ID 6 default size, empty steady-state deltas",
 			build: func() (*caseData, error) {
-				init := buildInit(48000, "audio", 1024, 0, 0x02000000)
+				init, err := buildInit(48000, "audio", 1024, 0, 0x02000000)
+				if err != nil {
+					return nil, err
+				}
 				var group []chunkSrc
 				for c := 0; c < 3; c++ {
 					samples := make([]sampleSpec, 4)
@@ -192,10 +239,13 @@ func cases() []vectorCase {
 			name:        "varying-sizes",
 			description: "video-like varying sizes: ID 1 carries n−1 entries, the last derives from P",
 			build: func() (*caseData, error) {
-				init := buildInit(90000, "video", 3000, 0, 0x01010000)
+				init, err := buildInit(90000, "video", 3000, 0, 0x01010000)
+				if err != nil {
+					return nil, err
+				}
 				var group []chunkSrc
 				for c := 0; c < 3; c++ {
-					ch, err := buildChunk(uint32(c+1), uint64(c)*9000, videoSamples(c, 3, false))
+					ch, err := buildChunk(uint32(c+1), uint64(c)*9000, videoSamples(c, 3, c == 0))
 					if err != nil {
 						return nil, err
 					}
@@ -208,7 +258,10 @@ func cases() []vectorCase {
 			name:        "single-sample",
 			description: "one sample per chunk: sizes never on the wire (P authoritative); ID 8 sync flags deleted via ID 27",
 			build: func() (*caseData, error) {
-				init := buildInit(90000, "video", 3000, 0, 0x01010000)
+				init, err := buildInit(90000, "video", 3000, 0, 0x01010000)
+				if err != nil {
+					return nil, err
+				}
 				var group []chunkSrc
 				for c := 0; c < 4; c++ {
 					flags := uint32(0x01010000)
@@ -230,7 +283,10 @@ func cases() []vectorCase {
 			name:        "negative-ctos",
 			description: "B-frame composition offsets: negative CTOs force trun v1; ID 5 zigzag in both contexts",
 			build: func() (*caseData, error) {
-				init := buildInit(90000, "video", 3000, 0, 0x01010000)
+				init, err := buildInit(90000, "video", 3000, 0, 0x01010000)
+				if err != nil {
+					return nil, err
+				}
 				ctos := [][]int32{{0, 6000, -3000}, {0, 3000, -3000}, {0, 6000, 3000}}
 				var group []chunkSrc
 				for c := 0; c < 3; c++ {
@@ -251,7 +307,10 @@ func cases() []vectorCase {
 			name:        "first-sample-flags",
 			description: "sync-led chunks: ID 12 emitted, then deleted via ID 27, then re-introduced by delta",
 			build: func() (*caseData, error) {
-				init := buildInit(90000, "video", 3000, 0, 0x01010000)
+				init, err := buildInit(90000, "video", 3000, 0, 0x01010000)
+				if err != nil {
+					return nil, err
+				}
 				sync := []bool{true, false, true}
 				var group []chunkSrc
 				for c := 0; c < 3; c++ {
@@ -268,7 +327,10 @@ func cases() []vectorCase {
 			name:        "per-sample-flags",
 			description: "mixed flags neither uniform nor equal-except-first: ID 7 full 32-bit list",
 			build: func() (*caseData, error) {
-				init := buildInit(90000, "video", 3000, 0, 0x01010000)
+				init, err := buildInit(90000, "video", 3000, 0, 0x01010000)
+				if err != nil {
+					return nil, err
+				}
 				flagSets := [][]uint32{
 					{0x02000000, 0x01010000, 0x02010000},
 					{0x02000000, 0x02010000, 0x01010000},
@@ -292,12 +354,15 @@ func cases() []vectorCase {
 			name:        "list-grow-shrink",
 			description: "sample count 2 → 4 → 1 across deltas: list grow (absolute-as-zigzag) and shrink (truncate)",
 			build: func() (*caseData, error) {
-				init := buildInit(90000, "video", 3000, 0, 0x01010000)
+				init, err := buildInit(90000, "video", 3000, 0, 0x01010000)
+				if err != nil {
+					return nil, err
+				}
 				counts := []int{2, 4, 1}
 				bmdt := uint64(0)
 				var group []chunkSrc
 				for c, n := range counts {
-					ch, err := buildChunk(uint32(c+1), bmdt, videoSamples(c, n, false))
+					ch, err := buildChunk(uint32(c+1), bmdt, videoSamples(c, n, c == 0))
 					if err != nil {
 						return nil, err
 					}
@@ -311,11 +376,14 @@ func cases() []vectorCase {
 			name:        "bmdt-reanchor",
 			description: "a BMDT discontinuity mid-group re-anchors with a full header",
 			build: func() (*caseData, error) {
-				init := buildInit(90000, "video", 3000, 0, 0x01010000)
+				init, err := buildInit(90000, "video", 3000, 0, 0x01010000)
+				if err != nil {
+					return nil, err
+				}
 				bmdts := []uint64{0, 9000, 900000, 909000} // jump at chunk 2
 				var group []chunkSrc
 				for c, b := range bmdts {
-					ch, err := buildChunk(uint32(c+1), b, videoSamples(c, 3, false))
+					ch, err := buildChunk(uint32(c+1), b, videoSamples(c, 3, c == 0))
 					if err != nil {
 						return nil, err
 					}
@@ -328,8 +396,13 @@ func cases() []vectorCase {
 			name:        "cenc-subsamples",
 			description: "cenc-protected chunks: per-sample IVs (ID 9 overwrite) and subsample maps (IDs 11/13/15)",
 			build: func() (*caseData, error) {
-				init := buildInit(90000, "video", 3000, 0, 0x01010000)
-				addTenc(init, 8, nil)
+				init, err := buildInit(90000, "video", 3000, 0, 0x01010000)
+				if err != nil {
+					return nil, err
+				}
+				if err := protect(init, "cenc", make([]byte, 8)); err != nil {
+					return nil, err
+				}
 				var group []chunkSrc
 				for c := 0; c < 3; c++ {
 					samples := make([]sampleSpec, 2)
@@ -357,12 +430,17 @@ func cases() []vectorCase {
 			build: func() (*caseData, error) {
 				// trex carries the uniform size, so no size field is on
 				// the wire at all — the trex-default derivation path.
-				init := buildInit(48000, "audio", 1024, 160, 0x02000000)
+				init, err := buildInit(48000, "audio", 1024, 160, 0x02000000)
+				if err != nil {
+					return nil, err
+				}
 				iv := make([]byte, 16)
 				for i := range iv {
 					iv[i] = byte(0xC0 + i)
 				}
-				addTenc(init, 0, iv)
+				if err := protect(init, "cbcs", iv); err != nil {
+					return nil, err
+				}
 				var group []chunkSrc
 				for c := 0; c < 2; c++ {
 					samples := make([]sampleSpec, 4)
@@ -382,7 +460,10 @@ func cases() []vectorCase {
 			name:        "genboxes",
 			description: "prft and emsg boxes ride verbatim as genBox elements ahead of full and delta headers",
 			build: func() (*caseData, error) {
-				init := buildInit(90000, "video", 3000, 0, 0x01010000)
+				init, err := buildInit(90000, "video", 3000, 0, 0x01010000)
+				if err != nil {
+					return nil, err
+				}
 				// prft payload: FullBox v0 flags 0, reference_track_ID,
 				// 64-bit NTP, 32-bit media time. Content is opaque to
 				// LOCMAF; bytes are deterministic.
@@ -401,7 +482,7 @@ func cases() []vectorCase {
 				}, []byte("urn:x\x00v\x00")...)}
 				var group []chunkSrc
 				for c := 0; c < 2; c++ {
-					ch, err := buildChunk(uint32(c+1), uint64(c)*9000, videoSamples(c, 2, c == 0))
+					ch, err := buildChunk(uint32(c+1), uint64(c)*6000, videoSamples(c, 2, c == 0))
 					if err != nil {
 						return nil, err
 					}
@@ -419,11 +500,15 @@ func cases() []vectorCase {
 			name:        "strict-cmf2-pair",
 			description: "two decode-equivalent source encodings (per-sample values vs tfhd defaults) yield one canonical object",
 			build: func() (*caseData, error) {
-				init := buildInit(90000, "video", 3000, 0, 0x01010000)
+				init, err := buildInit(90000, "video", 3000, 0, 0x01010000)
+				if err != nil {
+					return nil, err
+				}
 				samples := make([]sampleSpec, 3)
 				for i := range samples {
 					samples[i] = sampleSpec{dur: 2500, size: 300, flags: 0x01010000, fill: byte(0x0A + i)}
 				}
+				samples[0].flags = 0x02000000
 				ch, err := buildChunk(1, 0, samples)
 				if err != nil {
 					return nil, err
@@ -447,7 +532,10 @@ func cases() []vectorCase {
 			name:        "rawboxes-file",
 			description: "the .locmaf file format: a leading rawBoxes Object carries the init in-band, then normal chunks",
 			build: func() (*caseData, error) {
-				init := buildInit(90000, "video", 3000, 0, 0x01010000)
+				init, err := buildInit(90000, "video", 3000, 0, 0x01010000)
+				if err != nil {
+					return nil, err
+				}
 				var initBuf bytes.Buffer
 				if err := init.Encode(&initBuf); err != nil {
 					return nil, err
@@ -467,7 +555,10 @@ func cases() []vectorCase {
 			name:        "event-only",
 			description: "zero-sample event chunks: emsg genBoxes, full header per chunk, empty mdat",
 			build: func() (*caseData, error) {
-				init := buildInit(90000, "meta", 0, 0, 0)
+				init, err := buildInit(90000, "meta", 0, 0, 0)
+				if err != nil {
+					return nil, err
+				}
 				var group []chunkSrc
 				for c := 0; c < 2; c++ {
 					ch, err := buildChunk(uint32(c+1), uint64(90000*c), nil)

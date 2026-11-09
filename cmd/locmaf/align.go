@@ -96,6 +96,9 @@ func printTextReport(w io.Writer, r *conform.AlignReport) {
 		switch {
 		case c.Error != "":
 			fmt.Fprintf(w, "  g%03d o%03d: DIVERGED — %s\n", c.Group, c.Object, c.Error)
+		case len(c.TrailingBoxes) > 0 && c.SourceIdentical:
+			fmt.Fprintf(w, "  g%03d o%03d: aligned; trailing rawBoxes %v carried verbatim (%d bytes, %d on the wire)\n",
+				c.Group, c.Object, c.TrailingBoxes, c.SourceBytes, c.WireBytes)
 		case c.SourceIdentical:
 			fmt.Fprintf(w, "  g%03d o%03d: aligned; source already canonical (%d bytes, %d on the wire)\n",
 				c.Group, c.Object, c.SourceBytes, c.WireBytes)

@@ -8,11 +8,13 @@ import (
 
 	"github.com/Eyevinn/locmaf"
 	"github.com/Eyevinn/locmaf/conform"
+	"github.com/Eyevinn/mp4ff/mp4"
 )
 
 // runPack encodes a fragmented CMAF file as a self-contained .locmaf
 // file: a leading rawBoxes Object carrying the init (ftyp+moov) in-band,
-// then one length-prefixed LOCMAF Object per CMAF chunk. The file is a
+// then one length-prefixed LOCMAF Object per CMAF chunk, and a trailing
+// rawBoxes Object for any boxes after the last mdat. The file is a
 // single group (one delta chain): the first chunk carries a full header
 // and the rest delta headers, re-anchoring with a full header only at a
 // timeline (BMDT) discontinuity. CMAF segment structure is preserved by
@@ -77,11 +79,28 @@ func packFile(lc *conform.LoadedCMAF, includeInit bool) ([]byte, int, error) {
 		objects = 1
 	}
 
+	// Boxes after a segment's last mdat precede the next segment's first
+	// moof in the group, so they ride as genBoxes of that chunk. Only
+	// those after the last mdat of the file are trailing boxes, carried
+	// as a rawBoxes Object at the end.
+	var pending []mp4.Box
 	for s, seg := range lc.File.Segments {
 		for o, frag := range seg.Fragments {
 			genBoxes, err := conform.FragmentGenBoxes(seg, o, frag)
 			if err != nil {
 				return nil, 0, fmt.Errorf("segment %d chunk %d: %w", s, o, err)
+			}
+			if len(pending) > 0 {
+				lead := make([]locmaf.GenBox, 0, len(pending)+len(genBoxes))
+				for _, b := range pending {
+					gb, err := conform.ToGenBox(b)
+					if err != nil {
+						return nil, 0, fmt.Errorf("segment %d chunk %d: %w", s, o, err)
+					}
+					lead = append(lead, gb)
+				}
+				genBoxes = append(lead, genBoxes...)
+				pending = nil
 			}
 			var payload []byte
 			if frag.Mdat != nil {
@@ -93,7 +112,20 @@ func packFile(lc *conform.LoadedCMAF, includeInit bool) ([]byte, int, error) {
 			}
 			out = locmaf.AppendFramed(out, obj)
 			objects++
+			pending = append(pending, conform.FragmentTrailingBoxes(frag)...)
 		}
+	}
+	if len(pending) > 0 {
+		boxes, err := conform.EncodeBoxes(pending)
+		if err != nil {
+			return nil, 0, fmt.Errorf("trailing boxes: %w", err)
+		}
+		obj, err := locmaf.EncodeRaw(boxes, state)
+		if err != nil {
+			return nil, 0, fmt.Errorf("encode trailing boxes as rawBoxes: %w", err)
+		}
+		out = locmaf.AppendFramed(out, obj)
+		objects++
 	}
 	return out, objects, nil
 }

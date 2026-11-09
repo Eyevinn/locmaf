@@ -3,6 +3,7 @@ package conform_test
 import (
 	"bytes"
 	"encoding/binary"
+	"strings"
 	"testing"
 
 	"github.com/Eyevinn/locmaf"
@@ -204,4 +205,44 @@ func TestPreMoofBoxes(t *testing.T) {
 			require.Zero(t, vrep.NonConformant)
 		})
 	}
+}
+
+// TestTrailingBoxes checks that the boxes after a segment's last mdat are
+// aligned as a trailing rawBoxes Object after its last chunk and kept
+// verbatim in the canonical output, instead of being dropped from it.
+func TestTrailingBoxes(t *testing.T) {
+	trailing := append(uuidBox(9), rawBox("free", []byte{1, 2})...)
+	raw := append(preMoofCMAF(t, [][][]byte{{emsgBox(t, 1)}, nil}), trailing...)
+	lc, err := conform.LoadCMAF(raw, nil)
+	require.NoError(t, err)
+	frags := lc.File.Segments[0].Fragments
+	require.Len(t, frags, 2)
+	require.Empty(t, conform.FragmentTrailingBoxes(frags[0]))
+	got, err := conform.EncodeBoxes(conform.FragmentTrailingBoxes(frags[1]))
+	require.NoError(t, err)
+	require.Equal(t, trailing, got)
+
+	rep, canon, err := conform.Align(lc, true, false)
+	require.NoError(t, err)
+	require.Zero(t, rep.Diverged)
+	require.Equal(t, 3, rep.Aligned)
+	require.Len(t, rep.Chunks, 3)
+	require.Empty(t, rep.Chunks[1].TrailingBoxes)
+	require.NotContains(t, strings.Join(rep.Chunks[1].Normalizations, "\n"), "uuid",
+		"the trailing boxes are not part of the last chunk")
+	tr := rep.Chunks[2]
+	require.Equal(t, 2, tr.Object)
+	require.Equal(t, []string{"uuid", "free"}, tr.TrailingBoxes)
+	require.True(t, tr.SourceIdentical)
+	require.Equal(t, len(trailing), tr.SourceBytes)
+	require.Positive(t, tr.WireBytes)
+	require.Zero(t, tr.SourceMoofBytes)
+	requireSameTopLevel(t, raw, canon)
+
+	// The Objects' source bytes tile the media after the init.
+	total := len(lc.InitBytes)
+	for _, c := range rep.Chunks {
+		total += c.SourceBytes
+	}
+	require.Equal(t, len(raw), total)
 }

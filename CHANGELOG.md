@@ -8,6 +8,11 @@ Each release notes which LOCMAF packaging version (`locmafVersion`) it implement
 
 ## [Unreleased]
 
+### Added
+
+- `locmaf pack` and `locmaf align` (and the locmaf.dev checker) carry boxes after a segment's last `mdat` as a trailing
+  rawBoxes Object, instead of dropping them; new `conform.FragmentTrailingBoxes` and `ChunkResult.TrailingBoxes`.
+
 ### Fixed
 
 - `locmaf pack`, `locmaf align` and `conform.FragmentGenBoxes` keep the boxes before a later chunk's `moof`

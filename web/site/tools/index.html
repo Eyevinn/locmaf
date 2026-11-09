@@ -281,6 +281,7 @@
     for (const c of a.chunks) {
       let status;
       if (c.error) status = `<span class="status-pill bad">diverged</span> <span class="muted">${esc(c.error)}</span>`;
+      else if (c.trailingBoxes && c.sourceIdentical) status = `<span class="status-pill ok">aligned</span> <span class="muted">trailing rawBoxes (${esc(c.trailingBoxes.join(", "))}), carried verbatim</span>`;
       else if (c.sourceIdentical) status = `<span class="status-pill ok">aligned</span> <span class="muted">source already canonical</span>`;
       else {
         const norms = (c.normalizations || []).map((n) => `<li>${esc(n)}</li>`).join("");

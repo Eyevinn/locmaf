@@ -87,11 +87,15 @@ type DumpReport struct {
 	Objects    []DumpObject `json:"objects"`
 }
 
-// ChunkResult is the align outcome for one CMAF fragment (one LOCMAF
-// Object).
+// ChunkResult is the align outcome for one LOCMAF Object: a CMAF chunk,
+// or the trailing rawBoxes Object that carries the boxes after the last
+// mdat of a segment.
 type ChunkResult struct {
 	Group  int `json:"group"`
 	Object int `json:"object"`
+	// TrailingBoxes names the boxes of a trailing rawBoxes Object, and is
+	// empty for a chunk.
+	TrailingBoxes []string `json:"trailingBoxes,omitempty"`
 	// Aligned: canonical bytes from the source (A) equal the canonical
 	// bytes from the encode→decode round trip (B). This is the
 	// conformance assertion.

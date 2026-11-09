@@ -203,6 +203,32 @@ func FragmentGenBoxes(seg *mp4.MediaSegment, fragIdx int, frag *mp4.Fragment) ([
 	return gbs, nil
 }
 
+// FragmentTrailingBoxes returns the top-level boxes after the fragment's
+// mdat. A box between an mdat and the next moof belongs to that moof's
+// fragment, so only the last fragment of a segment has trailing boxes:
+// those after the segment's last mdat, which the draft carries as a
+// rawBoxes Object after the last chunk of the group.
+func FragmentTrailingBoxes(frag *mp4.Fragment) []mp4.Box {
+	for i, child := range frag.Children {
+		if child.Type() == "mdat" {
+			return frag.Children[i+1:]
+		}
+	}
+	return nil
+}
+
+// EncodeBoxes serializes boxes back to back, as a rawBoxes Object
+// carries them.
+func EncodeBoxes(boxes []mp4.Box) ([]byte, error) {
+	var buf bytes.Buffer
+	for _, b := range boxes {
+		if err := b.Encode(&buf); err != nil {
+			return nil, fmt.Errorf("re-encode %s: %w", b.Type(), err)
+		}
+	}
+	return buf.Bytes(), nil
+}
+
 // ToGenBox re-serializes a parsed box and strips the 8-byte header,
 // yielding the genBox payload (for uuid boxes the usertype leads the
 // payload, as the draft requires).

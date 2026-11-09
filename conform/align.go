@@ -28,59 +28,129 @@ func Align(lc *LoadedCMAF, collectCanon, wantBytes bool) (*AlignReport, []byte, 
 	if collectCanon {
 		canonFile = append(canonFile, raw[:starts[0]]...)
 	}
+	add := func(res ChunkResult, canon []byte) {
+		report.Chunks = append(report.Chunks, res)
+		if !res.Aligned {
+			report.Diverged++
+			return
+		}
+		report.Aligned++
+		report.SourceMoofBytes += res.SourceMoofBytes
+		report.WireHeaderBytes += res.WireHeaderBytes
+		if collectCanon {
+			canonFile = append(canonFile, canon...)
+		}
+	}
 	chunkIdx := 0
 	for g, seg := range f.Segments {
 		tx, rx := locmaf.NewState(), locmaf.NewState()
+		obj := 0 // Object index in the group, counting trailing rawBoxes Objects
 		for o, frag := range seg.Fragments {
-			res := ChunkResult{Group: g, Object: o}
 			srcStart := starts[chunkIdx]
 			srcEnd := uint64(len(raw))
 			if chunkIdx+1 < len(starts) {
 				srcEnd = starts[chunkIdx+1]
 			}
 			chunkIdx++
-			src := raw[srcStart:srcEnd]
-			res.SourceBytes = len(src)
+			// Boxes after the mdat are not part of the chunk, but a
+			// trailing rawBoxes Object after it.
+			trailing := FragmentTrailingBoxes(frag)
+			chunkEnd := srcEnd
+			if len(trailing) > 0 && frag.Mdat != nil {
+				if end := frag.Mdat.StartPos + frag.Mdat.Size(); end > srcStart && end <= srcEnd {
+					chunkEnd = end
+				}
+			}
+			src := raw[srcStart:chunkEnd]
+			res := ChunkResult{Group: g, Object: obj, SourceBytes: len(src)}
+			obj++
 
 			canon, objLen, headerLen, srcMoofLen, err := alignFragment(seg, o, frag, tx, rx, moov)
 			if err != nil {
 				res.Error = err.Error()
-				report.Diverged++
-				report.Chunks = append(report.Chunks, res)
-				continue
-			}
-			res.Aligned = true
-			res.WireBytes = objLen
-			res.WireHeaderBytes = headerLen
-			res.SourceMoofBytes = srcMoofLen
-			report.Aligned++
-			report.SourceMoofBytes += srcMoofLen
-			report.WireHeaderBytes += headerLen
-			if collectCanon {
-				canonFile = append(canonFile, canon...)
-			}
-
-			if bytes.Equal(src, canon) {
-				res.SourceIdentical = true
 			} else {
-				res.Normalizations = describeNormalizations(src, canon, frag.Moof, moov)
-				if wantBytes {
-					if off := FirstDiff(src, canon); off >= 0 {
-						res.FirstDiff = &DiffPoint{
-							Offset:    off,
-							SourceHex: HexWindow(src, off),
-							CanonHex:  HexWindow(canon, off),
-						}
+				res.Aligned = true
+				res.WireBytes = objLen
+				res.WireHeaderBytes = headerLen
+				res.SourceMoofBytes = srcMoofLen
+				if bytes.Equal(src, canon) {
+					res.SourceIdentical = true
+				} else {
+					res.Normalizations = describeNormalizations(src, canon, frag.Moof, moov)
+					if wantBytes {
+						res.FirstDiff = firstDiffPoint(src, canon)
 					}
 				}
 			}
-			report.Chunks = append(report.Chunks, res)
+			add(res, canon)
+
+			if len(trailing) > 0 {
+				res, canon := alignTrailing(trailing, raw[chunkEnd:srcEnd], tx, rx, moov, wantBytes)
+				res.Group, res.Object = g, obj
+				obj++
+				add(res, canon)
+			}
 		}
 	}
 	if !collectCanon || report.Diverged > 0 {
 		return report, nil, nil
 	}
 	return report, canonFile, nil
+}
+
+// alignTrailing runs both paths for the boxes after a segment's last
+// mdat, which the draft carries as a trailing rawBoxes Object, and
+// asserts A == B: (A) the boxes re-encoded back to back; (B) a rawBoxes
+// Object encoded and decoded against the in-group states, which it
+// resets. src is the source bytes after the mdat. It returns the result,
+// without its group and Object index, and the canonical bytes.
+func alignTrailing(boxes []mp4.Box, src []byte, tx, rx *locmaf.State,
+	moov *mp4.MoovBox, wantBytes bool) (ChunkResult, []byte) {
+	res := ChunkResult{SourceBytes: len(src)}
+	for _, b := range boxes {
+		res.TrailingBoxes = append(res.TrailingBoxes, b.Type())
+	}
+	canon, err := EncodeBoxes(boxes)
+	if err != nil {
+		res.Error = err.Error()
+		return res, nil
+	}
+	obj, err := locmaf.EncodeRaw(canon, tx)
+	if err != nil {
+		res.Error = fmt.Sprintf("encode: %v", err)
+		return res, nil
+	}
+	_, content, err := locmaf.Decode(obj, rx, moov)
+	if err != nil {
+		res.Error = fmt.Sprintf("decode: %v", err)
+		return res, nil
+	}
+	if !bytes.Equal(canon, content) {
+		res.Error = fmt.Errorf("%w at offset %d (A %d bytes, B %d bytes)",
+			ErrMisaligned, FirstDiff(canon, content), len(canon), len(content)).Error()
+		return res, nil
+	}
+	res.Aligned = true
+	res.WireBytes = len(obj)
+	if bytes.Equal(src, canon) {
+		res.SourceIdentical = true
+	} else {
+		res.Normalizations = boxDiff(src, canon)
+		if wantBytes {
+			res.FirstDiff = firstDiffPoint(src, canon)
+		}
+	}
+	return res, canon
+}
+
+// firstDiffPoint is the first-differing-byte window of src and canon, or
+// nil when they are equal.
+func firstDiffPoint(src, canon []byte) *DiffPoint {
+	off := FirstDiff(src, canon)
+	if off < 0 {
+		return nil
+	}
+	return &DiffPoint{Offset: off, SourceHex: HexWindow(src, off), CanonHex: HexWindow(canon, off)}
 }
 
 // alignFragment runs both paths for one fragment and asserts A == B:

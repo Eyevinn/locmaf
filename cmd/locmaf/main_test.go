@@ -25,6 +25,15 @@ const flagReport = "-report"
 // inline, two segments (styp) of two fragments each, varying sample sizes.
 func writeTestCMAF(t *testing.T, dir string) string {
 	t.Helper()
+	path := filepath.Join(dir, "test.cmaf")
+	require.NoError(t, os.WriteFile(path, buildTestCMAF(t, nil), 0o644))
+	return path
+}
+
+// buildTestCMAF builds the file of writeTestCMAF, with afterSegment
+// written after each segment's last mdat.
+func buildTestCMAF(t *testing.T, afterSegment []byte) []byte {
+	t.Helper()
 	init := mp4.CreateEmptyInit()
 	init.AddEmptyTrack(90000, "video", "und")
 	init.Moov.Mvex.Trex.DefaultSampleDuration = 3000
@@ -57,11 +66,9 @@ func writeTestCMAF(t *testing.T, dir string) string {
 			seq++
 		}
 		require.NoError(t, seg.Encode(&buf))
+		buf.Write(afterSegment)
 	}
-
-	path := filepath.Join(dir, "test.cmaf")
-	require.NoError(t, os.WriteFile(path, buf.Bytes(), 0o644))
-	return path
+	return buf.Bytes()
 }
 
 func TestAlignCLI(t *testing.T) {
@@ -134,6 +141,72 @@ func TestPackRoundTripMatchesAlignCanonical(t *testing.T) {
 		require.NoError(t, err)
 		require.Nil(t, raw)
 		chunk, err := locmaf.ReconstructCanonical(moov, eff)
+		require.NoError(t, err)
+		got = append(got, chunk...)
+	}
+	require.Equal(t, wantCanon, got)
+}
+
+// TestTrailingBoxes packs and aligns a file whose two segments end with
+// a uuid after their last mdat. align runs a group per segment, so each
+// uuid is a trailing rawBoxes Object of its segment. pack runs one group
+// over the file, so the first uuid, which precedes the second segment's
+// first moof, rides as a genBox of that chunk, and only the last one is
+// a trailing rawBoxes Object. Both give back the boxes in place.
+func TestTrailingBoxes(t *testing.T) {
+	usertype := bytes.Repeat([]byte{0x5a}, 16)
+	uuid := append([]byte{0, 0, 0, 26, 'u', 'u', 'i', 'd'}, append(usertype, 's', 'g')...)
+	uuidOnly := []string{"uuid"}
+	raw := buildTestCMAF(t, uuid)
+	path := filepath.Join(t.TempDir(), "trailing.cmaf")
+	require.NoError(t, os.WriteFile(path, raw, 0o644))
+
+	rep, wantCanon, err := alignFile(path, "", true, false)
+	require.NoError(t, err)
+	require.Zero(t, rep.Diverged)
+	require.Len(t, rep.Chunks, 6) // per segment: two chunks and the trailing rawBoxes
+	for _, c := range []conform.ChunkResult{rep.Chunks[2], rep.Chunks[5]} {
+		require.Equal(t, 2, c.Object)
+		require.Equal(t, uuidOnly, c.TrailingBoxes)
+		require.True(t, c.SourceIdentical)
+	}
+	require.Equal(t, conform.BoxNames(raw), conform.BoxNames(wantCanon))
+	require.Equal(t, 2, bytes.Count(wantCanon, uuid))
+
+	var stdout, stderr bytes.Buffer
+	require.Zero(t, run([]string{cmdAlign, path}, &stdout, &stderr), "stderr: %s", stderr.String())
+	require.Contains(t, stdout.String(), "g001 o002: aligned; trailing rawBoxes [uuid] carried verbatim (26 bytes")
+
+	lc, err := loadCMAF(path, "")
+	require.NoError(t, err)
+	data, objects, err := packFile(lc, true)
+	require.NoError(t, err)
+	require.Equal(t, 6, objects) // init, four chunks and the trailing rawBoxes
+
+	dump, err := conform.Dump(data, nil)
+	require.NoError(t, err)
+	require.Equal(t, []string{"uuid", "styp"}, dump.Objects[3].Moof.GenBoxes)
+	require.Equal(t, conform.KindRawBoxes, dump.Objects[5].Kind)
+	require.Equal(t, uuidOnly, dump.Objects[5].Raw.Boxes)
+	require.False(t, dump.Objects[5].Raw.IsInit)
+
+	vrep, err := conform.Verify(data, nil, true)
+	require.NoError(t, err)
+	require.Zero(t, vrep.NonConformant)
+
+	// Reconstructing the Objects in order gives align's canonical output.
+	objs, err := conform.SplitFramed(data)
+	require.NoError(t, err)
+	got := append([]byte(nil), lc.InitBytes...)
+	state := locmaf.NewState()
+	for _, obj := range objs[1:] {
+		eff, rawBoxes, err := locmaf.Decode(obj, state, lc.Moov)
+		require.NoError(t, err)
+		if rawBoxes != nil {
+			got = append(got, rawBoxes...)
+			continue
+		}
+		chunk, err := locmaf.ReconstructCanonical(lc.Moov, eff)
 		require.NoError(t, err)
 		got = append(got, chunk...)
 	}

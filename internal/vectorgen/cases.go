@@ -287,7 +287,10 @@ func cases() []vectorCase {
 				if err != nil {
 					return nil, err
 				}
-				ctos := [][]int32{{0, 6000, -3000}, {0, 3000, -3000}, {0, 6000, 3000}}
+				// Each chunk reorders its own three frames (I P B, P B B,
+				// P B P), so every presentation time is unique and each
+				// chunk's earliest presentation time is its BMDT.
+				ctos := [][]int32{{0, 3000, -3000}, {6000, -3000, -3000}, {3000, -3000, 0}}
 				var group []chunkSrc
 				for c := 0; c < 3; c++ {
 					samples := videoSamples(c, 3, c == 0)

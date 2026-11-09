@@ -51,7 +51,8 @@ func TestGenerationIsDeterministic(t *testing.T) {
 // with its canonical chunks, every video group starts with a sync sample,
 // and each chunk's decode time continues from the chunk before, except in
 // the cases that depart from CMAF on purpose. Audio such as AAC and Opus
-// has only sync samples, so its group starts need no check.
+// has only sync samples, so its group starts need no check. No two
+// samples have the same presentation time.
 func TestCasesAreCMAF(t *testing.T) {
 	gapsAllowed := map[string]bool{"bmdt-reanchor": true, "event-only": true}
 	for _, c := range cases() {
@@ -75,6 +76,7 @@ func TestCasesAreCMAF(t *testing.T) {
 			track := bytes.Clone(files["init.mp4"])
 			var group string
 			var nextDecodeTime uint64
+			presented := map[int64]string{}
 			for i, p := range paths {
 				chunk := files[p]
 				if bytes.Equal(chunk[4:8], []byte("ftyp")) {
@@ -95,6 +97,11 @@ func TestCasesAreCMAF(t *testing.T) {
 				}
 				if i > 0 && !gapsAllowed[c.name] {
 					require.Equal(t, nextDecodeTime, decodeTime, "%s: decode time", p)
+				}
+				for _, s := range samples {
+					pt := int64(s.DecodeTime) + int64(s.CompositionTimeOffset)
+					require.NotContains(t, presented, pt, "%s: presentation time %d is also in %s", p, pt, presented[pt])
+					presented[pt] = p
 				}
 				group = g
 				nextDecodeTime = decodeTime

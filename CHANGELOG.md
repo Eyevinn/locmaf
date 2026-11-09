@@ -12,7 +12,7 @@ Each release notes which LOCMAF packaging version (`locmafVersion`) it implement
 
 - `locmaf pack`, `locmaf align` and `conform.FragmentGenBoxes` keep the boxes before a later chunk's `moof`
   (`emsg`, `prft`, `uuid`, ...) as genBoxes of that chunk, and a `prft` before the first one, by moving to mp4ff v0.62.0 (#11).
-- `testdata/vectors`: every `init.mp4` is a complete CMAF header, every group starts with a sync sample, and `genboxes`
+- `testdata/vectors`: every `init.mp4` is a complete CMAF header, every video group starts with a sync sample, and `genboxes`
   has a delta header as described. The objects of `varying-sizes`, `list-grow-shrink`, `bmdt-reanchor`,
   `strict-cmf2-pair` and `genboxes` change.
 

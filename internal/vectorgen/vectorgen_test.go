@@ -48,9 +48,10 @@ func TestGenerationIsDeterministic(t *testing.T) {
 // TestCasesAreCMAF checks the CMAF structure of every case, so that CMAF
 // and ISOBMFF checkers such as dashcheck and MP4Box accept the corpus:
 // the init has one sample entry, mp4ff finds no brand issue in the init
-// with its canonical chunks, every group starts with a sync sample, and
-// each chunk's decode time continues from the chunk before, except in
-// the cases that depart from CMAF on purpose.
+// with its canonical chunks, every video group starts with a sync sample,
+// and each chunk's decode time continues from the chunk before, except in
+// the cases that depart from CMAF on purpose. Audio such as AAC and Opus
+// has only sync samples, so its group starts need no check.
 func TestCasesAreCMAF(t *testing.T) {
 	gapsAllowed := map[string]bool{"bmdt-reanchor": true, "event-only": true}
 	for _, c := range cases() {
@@ -62,6 +63,7 @@ func TestCasesAreCMAF(t *testing.T) {
 			require.NotNil(t, initFile.Init)
 			require.Len(t, initFile.Init.Moov.Trak.Mdia.Minf.Stbl.Stsd.Children, 1, "sample entries")
 			trex := initFile.Init.Moov.Mvex.Trex
+			video := initFile.Init.Moov.Trak.Mdia.Hdlr.HandlerType == "vide"
 
 			var paths []string
 			for p := range files {
@@ -87,8 +89,8 @@ func TestCasesAreCMAF(t *testing.T) {
 				samples, err := frag.GetFullSamples(trex)
 				require.NoError(t, err, p)
 				decodeTime := frag.Moof.Traf.Tfdt.BaseMediaDecodeTime()
-				g := strings.SplitN(strings.TrimPrefix(p, "canonical/"), "_", 2)[0]
-				if g != group && len(samples) > 0 {
+				g, _, _ := strings.Cut(strings.TrimPrefix(p, "canonical/"), "_")
+				if video && g != group && len(samples) > 0 {
 					require.True(t, mp4.IsSyncSampleFlags(samples[0].Flags), "%s starts a group without a sync sample", p)
 				}
 				if i > 0 && !gapsAllowed[c.name] {

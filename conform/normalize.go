@@ -162,6 +162,9 @@ func trunNorms(s, c *mp4.TrunBox) []string {
 	}
 	const p = "moof/traf/trun"
 	var out []string
+	if s.Version != c.Version {
+		out = append(out, fmt.Sprintf("%s: version %d → %d [TRUN_VERSION]", p, s.Version, c.Version))
+	}
 	if s.DataOffset != c.DataOffset {
 		out = append(out, fmt.Sprintf("%s: data_offset %d → %d [OFFSET_RECOMPUTED]", p, s.DataOffset, c.DataOffset))
 	}

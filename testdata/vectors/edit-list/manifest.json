@@ -1,0 +1,20 @@
+{
+  "name": "edit-list",
+  "description": "video with an offset edit list and non-negative B-frame offsets: trun v0 in every chunk, the CMAF alternative to v1 offsets",
+  "locmafVersion": "0.4",
+  "draftCommit": "2d3ec51",
+  "groups": 1,
+  "objects": 3,
+  "files": {
+    "canonical/g000_o000.cmfc": "b0786ddb387bf5f7148ad70fbd748846995a706431d0614b326a9b11e65bbdb5",
+    "canonical/g000_o001.cmfc": "b3652560ef8d8d0c5f32eaa9dbd583892f54d867a258908d169b695bfa3ad879",
+    "canonical/g000_o002.cmfc": "a8acbf1d83ef850a36983ff977a5b13a8f2995ff356e639b2d66f04cc74ca210",
+    "effective/g000_o000.json": "44571b2806a01b78d0e256c72ddb83f483ca79ed93b82b33caf399ce6953fcd9",
+    "effective/g000_o001.json": "3a3ccd11fc7d5fd5e999df89082674a8a172da08d64df00c483241f48634ac11",
+    "effective/g000_o002.json": "9c7269e993b8dfd44698bba1cdf98a60e0cbc718cc82a67c88ee73cb794e6041",
+    "init.mp4": "cbda635f75134e0bbf32ebe3c900b5f033aa120ad6748919b06c1da877d8e2e5",
+    "objects/g000_o000.locmafobj": "b03dff3156a05bd9ee6c8d437a8a18fb6ad1b6d4b303a50ebff3b8e85792cabc",
+    "objects/g000_o001.locmafobj": "f93dfa8a7147dcb5a222e04240c40fd6b7ada15a0958f5ed21ff282841c3b1bd",
+    "objects/g000_o002.locmafobj": "a13e9bab7379f70db318ca62d85f3237e173edb786fd21692edcaeda591fce22"
+  }
+}

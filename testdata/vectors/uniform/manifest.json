@@ -1,8 +1,8 @@
 {
   "name": "uniform",
   "description": "audio-like uniform durations and sizes: ID 6 default size, empty steady-state deltas",
-  "locmafVersion": "0.3",
-  "draftCommit": "bb4c68e",
+  "locmafVersion": "0.4",
+  "draftCommit": "2d3ec51",
   "groups": 1,
   "objects": 3,
   "files": {

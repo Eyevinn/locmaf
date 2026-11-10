@@ -3,8 +3,9 @@ package locmaf
 import "errors"
 
 // Version is the LOCMAF packaging version implemented by this package,
-// announced in the CMSF catalog Track entry as locmafVersion.
-const Version = "0.3"
+// signaled in the catalog Track entry by the version key of
+// packagingMetadata ("version=0.4").
+const Version = "0.4"
 
 // Element types. Each element of a LOCMAF Object payload begins with an
 // element_type vi64; the mdat payload that follows the header element is

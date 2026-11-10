@@ -1,13 +1,13 @@
 {
   "name": "per-sample-flags",
   "description": "mixed flags neither uniform nor equal-except-first: ID 7 full 32-bit list",
-  "locmafVersion": "0.3",
-  "draftCommit": "bb4c68e",
+  "locmafVersion": "0.4",
+  "draftCommit": "2d3ec51",
   "groups": 1,
   "objects": 2,
   "files": {
-    "canonical/g000_o000.cmfc": "61390e8081d110a39d131a937d40d646ce6bda7f4578d55bf1ea38020921e3b7",
-    "canonical/g000_o001.cmfc": "f4be193a94bcd096c2b1e6767b073c575a82b5624132f698833c067f6bb9b61c",
+    "canonical/g000_o000.cmfc": "b9d6a44bf2a828f4886f0eac6720416d75beb76f03bb55f4530b00f8e1016e8a",
+    "canonical/g000_o001.cmfc": "6c4a918ce04521878e61dc032d4b5ad698dce850057080cede72e738e7deb565",
     "effective/g000_o000.json": "7b9587e847af6575031881b100269be0776bf8a48ecf9d931e48e3e015704c97",
     "effective/g000_o001.json": "b3238ab6b7c99ab5fd0dc77591cdec6a397351e2961e520684db83c7681b8fb3",
     "init.mp4": "7687cd75458963205546acc3ae5ecdce319a2a04164204de5034c06528441230",

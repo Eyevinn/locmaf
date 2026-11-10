@@ -3,6 +3,7 @@ package conform_test
 import (
 	"bytes"
 	"encoding/binary"
+	"strings"
 	"testing"
 
 	"github.com/Eyevinn/locmaf"
@@ -245,4 +246,26 @@ func TestTrailingBoxRejected(t *testing.T) {
 		require.Len(t, gbs, 1)
 		require.Equal(t, "uuid", gbs[0].Name)
 	})
+}
+
+// TestTrunVersionNormalization checks that align explains a source trun
+// whose version differs from the canonical one: a video track without an
+// edit list gets version 1 in every chunk, also when the source has
+// version 0 and no negative offsets.
+func TestTrunVersionNormalization(t *testing.T) {
+	raw := preMoofCMAF(t, [][][]byte{nil, nil})
+	// mp4ff writes version 1; make the second chunk's trun version 0.
+	trun := bytes.LastIndex(raw, []byte("trun"))
+	require.Positive(t, trun)
+	require.Equal(t, byte(1), raw[trun+4])
+	raw[trun+4] = 0
+
+	lc, err := conform.LoadCMAF(raw, nil)
+	require.NoError(t, err)
+	rep, _, err := conform.Align(lc, false, false)
+	require.NoError(t, err)
+	require.Zero(t, rep.Diverged)
+	require.Len(t, rep.Chunks, 2)
+	require.NotContains(t, strings.Join(rep.Chunks[0].Normalizations, "\n"), "trun: version")
+	require.Contains(t, rep.Chunks[1].Normalizations, "moof/traf/trun: version 0 → 1 [TRUN_VERSION]")
 }

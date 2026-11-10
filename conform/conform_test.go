@@ -152,6 +152,7 @@ func TestAlign(t *testing.T) {
 	joined := strings.Join(norms, "\n")
 	require.NotContains(t, joined, "mfhd", "the canonical form keeps the source sequence number")
 	require.Contains(t, joined, "moof/traf/tfdt: version 0 → 1")
+	require.NotContains(t, joined, "trun: version", "mp4ff writes trun version 1, as does the canonical form of video without an edit list")
 	require.Contains(t, joined, "data_offset")
 	require.Contains(t, joined, "mdat: payload identical")
 

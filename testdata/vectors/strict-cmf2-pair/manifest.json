@@ -1,13 +1,13 @@
 {
   "name": "strict-cmf2-pair",
   "description": "two decode-equivalent source encodings (per-sample values vs tfhd defaults) yield one canonical object",
-  "locmafVersion": "0.3",
-  "draftCommit": "bb4c68e",
+  "locmafVersion": "0.4",
+  "draftCommit": "2d3ec51",
   "groups": 1,
   "objects": 1,
   "representationPairs": 1,
   "files": {
-    "canonical/g000_o000.cmfc": "db6e60a4ade53b045107c4a98b97d76389f513693c93e569eeeff7d49a91f005",
+    "canonical/g000_o000.cmfc": "632c8b02558931e265b24661661662c05d7325f1598e62452ef8c1ccbcf26ef4",
     "effective/g000_o000.json": "a2328618ab70104cf0a5bb6ff03958690ea5eb2334e0e13bcf37b35a987b0e28",
     "init.mp4": "7687cd75458963205546acc3ae5ecdce319a2a04164204de5034c06528441230",
     "objects/g000_o000.locmafobj": "1fef81840ffe89869fc0217e34315ce5712d6c578900b6b894a333841c95e28b"

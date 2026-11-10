@@ -85,7 +85,8 @@ func corpusReadme(summaries []caseSummary) []byte {
 	fmt.Fprintf(&b,
 		"The CMAF headers are real ones: H.264 (`avc1`, 640x360) for video,\n"+
 			"AAC-LC (`mp4a`) for audio, and a `urim` timed metadata sample entry\n"+
-			"with `%s` for `event-only`. The encrypted cases have a\n"+
+			"with `%s` for `event-only`. The `edit-list` cases have an\n"+
+			"offset edit list. The encrypted cases have a\n"+
 			"complete `sinf` (`frma`, `schm`, `tenc`), and segments have the CMAF\n"+
 			"structure, so CMAF and ISOBMFF checkers can check the corpus.\n\n",
 		eventSchemeURN)
@@ -96,9 +97,11 @@ func corpusReadme(summaries []caseSummary) []byte {
 			"decoder can decode them, and a checker that parses samples will\n"+
 			"reject them.\n\n")
 	fmt.Fprintf(&b,
-		"Two cases depart from CMAF on purpose: `bmdt-reanchor` jumps in\n"+
-			"decode time within a group, and `event-only` has chunks without\n"+
-			"samples.\n\n")
+		"Three cases depart from CMAF on purpose: `bmdt-reanchor` jumps in\n"+
+			"decode time within a group, `event-only` has chunks without\n"+
+			"samples, and `edit-list-negative-cto` has a negative composition\n"+
+			"offset in a video track with an edit list, so that its trun\n"+
+			"version changes from chunk to chunk.\n\n")
 
 	locmafClause := fmt.Sprintf("%d cases emit", filesWithLocmaf)
 	if filesWithLocmaf == 1 {

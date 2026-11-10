@@ -1,0 +1,20 @@
+{
+  "name": "edit-list-negative-cto",
+  "description": "video with an offset edit list and a negative offset in the middle chunk: trun v1 in that chunk only, v0 in the others",
+  "locmafVersion": "0.4",
+  "draftCommit": "2d3ec51",
+  "groups": 1,
+  "objects": 3,
+  "files": {
+    "canonical/g000_o000.cmfc": "b0786ddb387bf5f7148ad70fbd748846995a706431d0614b326a9b11e65bbdb5",
+    "canonical/g000_o001.cmfc": "034b98c6b75ff8b9b8ae1fe8d7c8c4674ab27df50f4497b2ccc7ee602b3f197d",
+    "canonical/g000_o002.cmfc": "a8acbf1d83ef850a36983ff977a5b13a8f2995ff356e639b2d66f04cc74ca210",
+    "effective/g000_o000.json": "44571b2806a01b78d0e256c72ddb83f483ca79ed93b82b33caf399ce6953fcd9",
+    "effective/g000_o001.json": "f44507e8199449354563eefcf4c0519e89401c2b6e19586d8352664c60ec4842",
+    "effective/g000_o002.json": "9c7269e993b8dfd44698bba1cdf98a60e0cbc718cc82a67c88ee73cb794e6041",
+    "init.mp4": "cbda635f75134e0bbf32ebe3c900b5f033aa120ad6748919b06c1da877d8e2e5",
+    "objects/g000_o000.locmafobj": "b03dff3156a05bd9ee6c8d437a8a18fb6ad1b6d4b303a50ebff3b8e85792cabc",
+    "objects/g000_o001.locmafobj": "9be6600e4272074ba2492e5ca37331074e17b45d14bfb90cb075e5487bb267d2",
+    "objects/g000_o002.locmafobj": "869f2164b68101216abf8ff208ea2ab8452bae297e030d1538a7ce58000aae6b"
+  }
+}

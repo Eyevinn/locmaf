@@ -23,7 +23,7 @@ carriage, BMDT re-anchoring, event-only chunks, and more.
   (source: [Eyevinn/locmaf-id](https://github.com/Eyevinn/locmaf-id))
 - Explainer site and slides: <https://locmaf.dev> (source in [`web/`](web/))
 - In-browser conformance checker: <https://locmaf.dev/tools/> — client-side, nothing uploaded
-- Packaging version: `locmafVersion "0.3"`
+- Packaging version: `"0.4"`
 
 ## Layout
 
@@ -37,7 +37,7 @@ locmaf/              package locmaf — codec: EncodeCanonical, Decode, Reconstr
 └── web/             locmaf.dev site + /tools/ checker (separate stub module, not part of the Go module)
 ```
 
-The codec implements packaging version 0.3: the element sequence (genBox / full /
+The codec implements packaging version 0.4: the element sequence (genBox / full /
 delta headers), vi64 integers, full 32-bit sample_flags, derived-only
 delta BMDT, scheme-agnostic CENC carriage, and the canonical
 reconstruction (byte-exact moof rebuild including senc/saiz/saio).

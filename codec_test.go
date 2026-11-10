@@ -118,7 +118,8 @@ func TestGoldenFullObject(t *testing.T) {
 		"0000004c" + "74726166" + // traf, 76 bytes
 		"00000010" + "74666864" + "00020000" + "00000001" + // tfhd: base-is-moof, track 1
 		"00000014" + "74666474" + "01000000" + "0000000000015f90" + // tfdt v1
-		"00000020" + "7472756e" + "00000205" + "00000002" + "0000006c" + // trun: fsf+sizes, data_offset 108
+		// trun v1 (video without an edit list): fsf+sizes, data_offset 108
+		"00000020" + "7472756e" + "01000205" + "00000002" + "0000006c" +
 		"02000000" + // first_sample_flags
 		"00000320" + "000002bc" + // sizes 800, 700
 		"000005e4" + "6d646174" // mdat, 8+1500

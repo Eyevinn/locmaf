@@ -52,9 +52,12 @@ func TestGenerationIsDeterministic(t *testing.T) {
 // and each chunk's decode time continues from the chunk before, except in
 // the cases that depart from CMAF on purpose. Audio such as AAC and Opus
 // has only sync samples, so its group starts need no check. No two
-// samples have the same presentation time.
+// samples have the same presentation time. A video track has one trun
+// version, 1 without an edit list and 0 with one, except in
+// edit-list-negative-cto, whose negative offset needs version 1.
 func TestCasesAreCMAF(t *testing.T) {
 	gapsAllowed := map[string]bool{"bmdt-reanchor": true, "event-only": true}
+	trunMixAllowed := map[string]bool{"edit-list-negative-cto": true}
 	for _, c := range cases() {
 		t.Run(c.name, func(t *testing.T) {
 			files, err := generateCase(c)
@@ -64,7 +67,13 @@ func TestCasesAreCMAF(t *testing.T) {
 			require.NotNil(t, initFile.Init)
 			require.Len(t, initFile.Init.Moov.Trak.Mdia.Minf.Stbl.Stsd.Children, 1, "sample entries")
 			trex := initFile.Init.Moov.Mvex.Trex
-			video := initFile.Init.Moov.Trak.Mdia.Hdlr.HandlerType == "vide"
+			trak := initFile.Init.Moov.Trak
+			video := trak.Mdia.Hdlr.HandlerType == "vide"
+			editList := trak.Edts != nil && len(trak.Edts.Elst) > 0
+			wantTrunVersion := byte(1)
+			if editList {
+				wantTrunVersion = 0
+			}
 
 			var paths []string
 			for p := range files {
@@ -94,6 +103,9 @@ func TestCasesAreCMAF(t *testing.T) {
 				g, _, _ := strings.Cut(strings.TrimPrefix(p, "canonical/"), "_")
 				if video && g != group && len(samples) > 0 {
 					require.True(t, mp4.IsSyncSampleFlags(samples[0].Flags), "%s starts a group without a sync sample", p)
+				}
+				if video && !trunMixAllowed[c.name] {
+					require.Equal(t, wantTrunVersion, frag.Moof.Traf.Trun.Version, "%s: trun version", p)
 				}
 				if i > 0 && !gapsAllowed[c.name] {
 					require.Equal(t, nextDecodeTime, decodeTime, "%s: decode time", p)

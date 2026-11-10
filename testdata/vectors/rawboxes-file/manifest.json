@@ -1,14 +1,14 @@
 {
   "name": "rawboxes-file",
   "description": "the .locmaf file format: a leading rawBoxes Object carries the init in-band, then normal chunks",
-  "locmafVersion": "0.3",
-  "draftCommit": "bb4c68e",
+  "locmafVersion": "0.4",
+  "draftCommit": "2d3ec51",
   "groups": 1,
   "objects": 3,
   "files": {
     "canonical/g000_o000.cmfc": "7687cd75458963205546acc3ae5ecdce319a2a04164204de5034c06528441230",
-    "canonical/g000_o001.cmfc": "cf4a79f57c88f8862dc9632ff956c1e7d1ba917b05d568c9517b23e5590e3251",
-    "canonical/g000_o002.cmfc": "6a92568304d4d3dd43326507a89f6e2af0d3a2e9f6b27b0d4b8bcb7a4666041c",
+    "canonical/g000_o001.cmfc": "3bf4a2b5c9da7ae3374668a1afb3ae81ecc8e7dc8b26e29d9178ea3f22a359c1",
+    "canonical/g000_o002.cmfc": "e53515026feccf0f43ea0c036282ebbb9d6538d2149130a7f2db172f142b7c91",
     "effective/g000_o000.json": "379cb4a1c9e87853d7d1b74caaaddda50feeb2408753340b8f3d1606a59c8eb2",
     "effective/g000_o001.json": "22fa052fd4f60f7940d3306942355828b5475c06c8fe0d1e82ff089683a7ffa8",
     "effective/g000_o002.json": "65015cd44495cf714d18117c9109d4d77b1ab871342bfd6ada1c3f062853f85b",

@@ -1,8 +1,8 @@
 {
   "name": "seqnum-increment",
   "description": "mfhd sequence number +1 per chunk across groups and through the 2^32 wrap: ID 18 in each full header, one ID 20 step of +1 in the first delta of each group",
-  "locmafVersion": "0.3",
-  "draftCommit": "bb4c68e",
+  "locmafVersion": "0.4",
+  "draftCommit": "2d3ec51",
   "groups": 2,
   "objects": 6,
   "files": {

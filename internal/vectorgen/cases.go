@@ -17,10 +17,10 @@ import (
 )
 
 // draftCommit is the locmaf-id commit the corpus was generated against
-// (main with the mfhd sequence number of Eyevinn/locmaf-id#2 and without
-// trailing boxes). Bump it together with any wire- or canonical-affecting
-// draft change.
-const draftCommit = "bb4c68e"
+// (main with LOCMAF 0.4, whose canonical trun version follows the track,
+// Eyevinn/locmaf-id#7). Bump it together with any wire- or
+// canonical-affecting draft change.
+const draftCommit = "2d3ec51"
 
 // chunkSrc is one source chunk of a group: either a moof + mdat pair
 // (with optional genBoxes and decode-equivalent alternate moofs), or a
@@ -338,6 +338,22 @@ func cases() []vectorCase {
 					group = append(group, ch)
 				}
 				return &caseData{init: init, groups: [][]chunkSrc{group}}, nil
+			},
+		},
+		{
+			name: "edit-list",
+			description: "video with an offset edit list and non-negative B-frame offsets: trun v0 " +
+				"in every chunk, the CMAF alternative to v1 offsets",
+			build: func() (*caseData, error) {
+				return editListCase([][]int32{{3000, 6000, 0}, {3000, 6000, 0}, {3000, 6000, 0}})
+			},
+		},
+		{
+			name: "edit-list-negative-cto",
+			description: "video with an offset edit list and a negative offset in the middle chunk: " +
+				"trun v1 in that chunk only, v0 in the others",
+			build: func() (*caseData, error) {
+				return editListCase([][]int32{{3000, 6000, 0}, {6000, 6000, -3000}, {3000, 6000, 0}})
 			},
 		},
 		{
@@ -688,6 +704,51 @@ func cases() []vectorCase {
 			},
 		},
 	}
+}
+
+// editListCase builds a video case whose CMAF header has an offset edit
+// list of one frame (3000 ticks), with one group of three-frame chunks
+// whose composition offsets are ctos. Each chunk presents its frames one
+// frame after its BMDT, which the edit list shifts back.
+func editListCase(ctos [][]int32) (*caseData, error) {
+	init, err := buildInit(90000, "video", 3000, 0, 0x01010000)
+	if err != nil {
+		return nil, err
+	}
+	addOffsetEditList(init, 3000)
+	var group []chunkSrc
+	for c, chunkCTOs := range ctos {
+		samples := videoSamples(c, len(chunkCTOs), c == 0)
+		for i := range samples {
+			samples[i].cto = chunkCTOs[i]
+		}
+		ch, err := buildChunk(0, uint64(c)*9000, samples)
+		if err != nil {
+			return nil, err
+		}
+		group = append(group, ch)
+	}
+	return &caseData{init: init, groups: [][]chunkSrc{group}}, nil
+}
+
+// addOffsetEditList gives the track the only edit list that CMAF allows
+// in a CMAF header (ISO/IEC 23000-19, 7.5.13): one entry with
+// segment_duration 0, media rate 1 and the given media_time. The edts
+// goes right after the tkhd.
+func addOffsetEditList(init *mp4.InitSegment, mediaTime int64) {
+	elst := &mp4.ElstBox{Entries: []mp4.ElstEntry{{MediaTime: mediaTime, MediaRateInteger: 1}}}
+	edts := &mp4.EdtsBox{Elst: []*mp4.ElstBox{elst}}
+	edts.AddChild(elst)
+	trak := init.Moov.Trak
+	trak.Edts = edts
+	children := make([]mp4.Box, 0, len(trak.Children)+1)
+	for _, c := range trak.Children {
+		children = append(children, c)
+		if c.Type() == "tkhd" {
+			children = append(children, edts)
+		}
+	}
+	trak.Children = children
 }
 
 // encodeInit serializes the init segment.

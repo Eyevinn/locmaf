@@ -8,17 +8,21 @@ Each release notes which LOCMAF packaging version (`locmafVersion`) it implement
 
 ## [Unreleased]
 
-Still implements LOCMAF packaging version `"0.3"`: older receivers skip the new sequence-number fields and still
-decode the same samples.
+Implements LOCMAF packaging version `"0.4"`. The wire format is that of `"0.3"` plus the sequence-number fields, which
+older receivers skip, but the canonical `trun` version of video changes.
 
 ### Added
 
 - The `mfhd` sequence number is carried (draft field IDs 18 and 20): `EncodeCanonical` reads it, `Decode` returns it as
   `EffectiveValues.SequenceNumber`, and `ReconstructCanonical` writes it instead of 0 (#16).
-- `testdata/vectors`: cases `seqnum-constant`, `seqnum-constant-video`, `seqnum-increment` and `seqnum-jumps`.
+- `testdata/vectors`: cases `seqnum-constant`, `seqnum-constant-video`, `seqnum-increment`, `seqnum-jumps`, `edit-list`
+  and `edit-list-negative-cto`.
 
 ### Changed
 
+- `locmaf.Version` is `"0.4"`: `ReconstructCanonical` gives a video track without an edit list `trun` version 1 in every
+  chunk, so the canonical chunks of most video vectors change, and `locmaf align` reports a changed version as
+  `TRUN_VERSION`.
 - `EncodeCanonical` rejects a source `moof` without `mfhd`, `conform` no longer reports `SEQUENCE_ZEROED`, and
   `locmaf dump` shows a non-zero sequence number.
 

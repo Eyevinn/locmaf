@@ -1,8 +1,8 @@
 {
   "name": "negative-ctos",
   "description": "B-frame composition offsets: negative CTOs force trun v1; ID 5 zigzag in both contexts",
-  "locmafVersion": "0.3",
-  "draftCommit": "bb4c68e",
+  "locmafVersion": "0.4",
+  "draftCommit": "2d3ec51",
   "groups": 1,
   "objects": 3,
   "files": {

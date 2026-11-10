@@ -1,8 +1,8 @@
 {
   "name": "cbcs-omit",
   "description": "cbcs constant-IV audio with no per-sample aux info: senc/saiz/saio all omitted",
-  "locmafVersion": "0.3",
-  "draftCommit": "bb4c68e",
+  "locmafVersion": "0.4",
+  "draftCommit": "2d3ec51",
   "groups": 1,
   "objects": 2,
   "files": {

@@ -1,8 +1,8 @@
 {
   "name": "seqnum-constant",
   "description": "one mfhd sequence number, the segment number, in every chunk of a group: ID 18 (a 5-byte vi64) in each full header, empty steady-state deltas",
-  "locmafVersion": "0.3",
-  "draftCommit": "bb4c68e",
+  "locmafVersion": "0.4",
+  "draftCommit": "2d3ec51",
   "groups": 2,
   "objects": 6,
   "files": {

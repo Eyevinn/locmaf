@@ -28,8 +28,8 @@ const (
 )
 
 // canonicalLayout captures every presence decision of the canonical
-// reconstruction, derived from the effective values and the trex
-// defaults alone — wire presence plays no part.
+// reconstruction, derived from the effective values, the trex defaults
+// and the trun version of the track alone — wire presence plays no part.
 type canonicalLayout struct {
 	n int
 
@@ -53,9 +53,16 @@ type canonicalLayout struct {
 	auxEqual bool
 }
 
-func deriveLayout(eff *EffectiveValues, trex *mp4.TrexBox) (*canonicalLayout, error) {
+// deriveLayout derives the layout of one chunk. trackTrunV1 is true when
+// the track's trun is version 1 in every chunk (see trackTrunV1);
+// otherwise a chunk gets version 1 only when it has a negative
+// composition-time offset.
+func deriveLayout(eff *EffectiveValues, trex *mp4.TrexBox, trackTrunV1 bool) (*canonicalLayout, error) {
 	n := eff.SampleCount
 	l := &canonicalLayout{n: n}
+	if trackTrunV1 {
+		l.trunVersion = 1
+	}
 
 	l.sdixPresent = eff.SampleDescriptionIndex != trex.DefaultSampleDescriptionIndex
 
@@ -216,6 +223,39 @@ func validateEffective(eff *EffectiveValues) error {
 	return nil
 }
 
+// trackTrunV1 reports whether every canonical trun of the track is
+// version 1: the track is video (hdlr handler type vide) and its CMAF
+// Header has no EditListBox. CMAF (ISO/IEC 23000-19, 9.2.5) lets a video
+// track use either version 1 truns or an offset edit list with version 0
+// truns, not both, so the version follows the track and not the chunk.
+// Only the presence of an edit list matters, since CMAF allows only an
+// offset edit list in a CMAF Header (7.5.13).
+func trackTrunV1(moov *mp4.MoovBox) bool {
+	trak := moov.Trak
+	if trak == nil || trak.Mdia == nil || trak.Mdia.Hdlr == nil || trak.Mdia.Hdlr.HandlerType != "vide" {
+		return false
+	}
+	return !hasEditList(trak.Edts)
+}
+
+// hasEditList reports whether edts holds an EditListBox. mp4ff fills
+// Elst only when it decodes the box, so a box built in code is found
+// among the children.
+func hasEditList(edts *mp4.EdtsBox) bool {
+	if edts == nil {
+		return false
+	}
+	if len(edts.Elst) > 0 {
+		return true
+	}
+	for _, c := range edts.Children {
+		if c.Type() == "elst" {
+			return true
+		}
+	}
+	return false
+}
+
 // ReconstructCanonical builds the canonical CMAF chunk bytes — each
 // genBox wrapped as an ISO box, the moof, and the mdat — from the
 // chunk's effective values and the CMAF Header's moov.
@@ -235,7 +275,7 @@ func ReconstructCanonical(moov *mp4.MoovBox, eff *EffectiveValues) ([]byte, erro
 		trackID = moov.Trak.Tkhd.TrackID
 	}
 
-	l, err := deriveLayout(eff, trex)
+	l, err := deriveLayout(eff, trex, trackTrunV1(moov))
 	if err != nil {
 		return nil, err
 	}
